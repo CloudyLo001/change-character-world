@@ -27,6 +27,7 @@ export class InputController {
   private hideUiRequested = false;
   private groundOffsetSteps = 0;
   private lightSteps = 0;
+  private armTuckSteps = 0;
   private rebakeRequested = false;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
@@ -38,6 +39,8 @@ export class InputController {
     if (event.code === 'BracketRight') this.groundOffsetSteps += 1;
     if (event.code === 'Comma') this.lightSteps -= 1;
     if (event.code === 'Period') this.lightSteps += 1;
+    if (event.code === 'Semicolon') this.armTuckSteps -= 1;
+    if (event.code === 'Quote') this.armTuckSteps += 1;
     if (event.code === 'Space') event.preventDefault();
     this.keys.add(event.code);
   };
@@ -123,6 +126,13 @@ export class InputController {
   consumeLightSteps(): number {
     const steps = this.lightSteps;
     this.lightSteps = 0;
+    return steps;
+  }
+
+  /** Net ; / ' arm-tuck key presses since the last call. */
+  consumeArmTuckSteps(): number {
+    const steps = this.armTuckSteps;
+    this.armTuckSteps = 0;
     return steps;
   }
 

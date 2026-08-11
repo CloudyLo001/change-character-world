@@ -26,6 +26,18 @@ const ANKLE_BONE_CLEARANCE = 0.09;
 const MAX_FOOT_CORRECTION = 0.25;
 const TOE_BONE_PATTERN = /toe|ball/i;
 const ANKLE_BONE_PATTERN = /foot|ankle/i;
+// Mint rigs characters from a T-pose, so retargeted arms sit wider than the
+// source clip intends — worse the bulkier the shoulders. These find the upper
+// arm bone and the elbow below it so the spread can be measured and corrected.
+// Rigs are commonly CamelCase (LeftArm/LeftForeArm) or delimited
+// (upper_arm.L), so these must match inside a word as well as at boundaries.
+const UPPER_ARM_PATTERN = /(upper.?arm|shoulder|arm)/i;
+const FOREARM_PATTERN = /(fore.?arm|lower.?arm|elbow)/i;
+const LEFT_PATTERN = /(left|(^|[^a-z])l($|[^a-z]))/i;
+const RIGHT_PATTERN = /(right|(^|[^a-z])r($|[^a-z]))/i;
+/** Degrees the upper arm may sit off the torso before it reads as flared. */
+const DEFAULT_ARM_TUCK_TARGET = 10;
+const MAX_ARM_TUCK = 55;
 const CHARACTER_ENV_MAP_INTENSITY = 1;
 
 /**
@@ -49,6 +61,24 @@ export class Character {
   private reducedMotion = false;
   /** How far the posed feet had to be corrected off the bind-pose estimate. */
   readonly footCorrection: number;
+
+  private readonly arms: ArmChain[] = [];
+  private armTuckTarget = DEFAULT_ARM_TUCK_TARGET;
+  private lastArmSpread: ArmSpread = {
+    leftBefore: 0,
+    rightBefore: 0,
+    leftAfter: 0,
+    rightAfter: 0,
+  };
+  private readonly armDirection = new THREE.Vector3();
+  private readonly armPivot = new THREE.Vector3();
+  private readonly armElbow = new THREE.Vector3();
+  private readonly rootQuaternion = new THREE.Quaternion();
+  private readonly rootInverse = new THREE.Quaternion();
+  private readonly parentWorld = new THREE.Quaternion();
+  private readonly parentInverse = new THREE.Quaternion();
+  private readonly tuckAxis = new THREE.Vector3();
+  private readonly tuckDelta = new THREE.Quaternion();
 
   private constructor(
     readonly entry: CharacterEntry,
@@ -88,7 +118,39 @@ export class Character {
     }
 
     this.footCorrection = this.alignPosedFeet(model);
+    this.collectArmChains(model);
     prepareMaterials(model);
+  }
+
+  /**
+   * Finds each upper-arm bone plus the elbow beneath it. The elbow gives the
+   * arm's actual direction, which is what the spread is measured from.
+   */
+  private collectArmChains(model: THREE.Group): void {
+    const bones: THREE.Bone[] = [];
+    model.traverse((object) => {
+      if ((object as THREE.Bone).isBone) bones.push(object as THREE.Bone);
+    });
+
+    for (const bone of bones) {
+      if (FOREARM_PATTERN.test(bone.name)) continue;
+      if (!UPPER_ARM_PATTERN.test(bone.name)) continue;
+      const elbow = findElbow(bone);
+      if (!elbow) continue;
+      const isLeft = LEFT_PATTERN.test(bone.name);
+      const isRight = RIGHT_PATTERN.test(bone.name);
+      if (!isLeft && !isRight) continue;
+      const side: ArmSide = isLeft ? 'left' : 'right';
+      // Several bones can match on a chain (clavicle, shoulder, arm); keep the
+      // one closest to the elbow so the correction pivots at the shoulder.
+      const existing = this.arms.find((arm) => arm.side === side);
+      if (!existing) {
+        this.arms.push({ side, bone, elbow });
+      } else if (bone.parent === existing.bone || isDescendantOf(bone, existing.bone)) {
+        existing.bone = bone;
+        existing.elbow = elbow;
+      }
+    }
   }
 
   /**
@@ -175,6 +237,117 @@ export class Character {
     this.reducedMotion = enabled;
   }
 
+  /** Degrees of sideways spread allowed before the arms are pulled in. */
+  setArmTuckTarget(degrees: number): number {
+    this.armTuckTarget = THREE.MathUtils.clamp(degrees, 0, 90);
+    return this.armTuckTarget;
+  }
+
+  get armTuck(): number {
+    return this.armTuckTarget;
+  }
+
+  /** Bone names and the detected arm chain, for diagnosing an unknown rig. */
+  describeRig(): { bones: string[]; arms: Array<{ side: string; bone: string; elbow: string }> } {
+    const bones: string[] = [];
+    this.root.traverse((object) => {
+      if ((object as THREE.Bone).isBone) bones.push(object.name);
+    });
+    return {
+      bones,
+      arms: this.arms.map((arm) => ({
+        side: arm.side,
+        bone: arm.bone.name,
+        elbow: arm.elbow.name,
+      })),
+    };
+  }
+
+  /**
+   * Measured spread of each upper arm in degrees. `left`/`right` are the angle
+   * in the frontal plane, which is what the correction rotates; `*Lateral` is
+   * how far the arm points sideways overall, which stays meaningful even when
+   * the arm has swung forward and the frontal projection gets small.
+   */
+  get armSpread(): ArmSpread & { bones: number } {
+    return { ...this.lastArmSpread, bones: this.arms.length };
+  }
+
+  /**
+   * Pulls flared arms back toward the torso after the animation has posed the
+   * skeleton. Only the sideways component is touched — the correction rotates
+   * about the character's forward axis — so the forward/back arm swing that
+   * carries the walk and run cycles is preserved exactly as animated.
+   */
+  private applyArmTuck(): void {
+    if (this.arms.length === 0) return;
+    this.root.updateMatrixWorld(true);
+    this.root.getWorldQuaternion(this.rootQuaternion);
+    this.rootInverse.copy(this.rootQuaternion).invert();
+    // The character's forward axis in world space; rotating about it swings the
+    // arm through the frontal plane, which is exactly the flare.
+    this.tuckAxis.set(0, 0, 1).applyQuaternion(this.rootQuaternion).normalize();
+
+    for (const arm of this.arms) {
+      const before = this.measureArm(arm);
+      this.lastArmSpread[arm.side === 'left' ? 'leftBefore' : 'rightBefore'] = before.lateral;
+      this.lastArmSpread[arm.side === 'left' ? 'leftAfter' : 'rightAfter'] = before.lateral;
+
+      const excess = before.frontal - this.armTuckTarget;
+      if (excess <= 0.01 || before.downward <= 0) continue;
+      // An arm swung far forward has almost no frontal projection, which makes
+      // the angle jittery; there is no visible flare to correct there anyway.
+      if (Math.hypot(before.sideways, before.downward) < 0.25) continue;
+      const correction = THREE.MathUtils.degToRad(Math.min(excess, MAX_ARM_TUCK));
+
+      // Rotating about +forward carries +X down toward the body, so the sign
+      // flips for the arm on the other side.
+      this.tuckDelta.setFromAxisAngle(
+        this.tuckAxis,
+        before.sideways > 0 ? -correction : correction,
+      );
+
+      const parent = arm.bone.parent;
+      if (!parent) continue;
+      parent.getWorldQuaternion(this.parentWorld);
+      this.parentInverse.copy(this.parentWorld).invert();
+      // World-space delta rebased into the bone's parent space.
+      arm.bone.quaternion.premultiply(
+        this.parentInverse.clone().multiply(this.tuckDelta).multiply(this.parentWorld),
+      );
+      arm.bone.updateMatrixWorld(true);
+
+      this.lastArmSpread[arm.side === 'left' ? 'leftAfter' : 'rightAfter'] =
+        this.measureArm(arm).lateral;
+    }
+  }
+
+  /** Arm direction in the character's own frame, plus the angles derived from it. */
+  private measureArm(arm: ArmChain): {
+    sideways: number;
+    downward: number;
+    frontal: number;
+    lateral: number;
+  } {
+    arm.bone.getWorldPosition(this.armPivot);
+    arm.elbow.getWorldPosition(this.armElbow);
+    this.armDirection.subVectors(this.armElbow, this.armPivot);
+    if (this.armDirection.lengthSq() < 1e-8) {
+      return { sideways: 0, downward: 1, frontal: 0, lateral: 0 };
+    }
+    this.armDirection.normalize().applyQuaternion(this.rootInverse);
+    const sideways = this.armDirection.x;
+    const downward = -this.armDirection.y;
+    return {
+      sideways,
+      downward,
+      // Angle within the frontal plane, which is what the correction rotates.
+      frontal: THREE.MathUtils.radToDeg(Math.atan2(Math.abs(sideways), Math.abs(downward))),
+      // How far the arm points sideways overall, stable under forward swing.
+      lateral: THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(Math.abs(sideways), 0, 1))),
+    };
+  }
+
   /** Drive the blend tree from controller state; call every frame. */
   update(delta: number, horizontalSpeed: number, grounded: boolean): void {
     const idle = this.actions.get('idle');
@@ -235,6 +408,7 @@ export class Character {
     }
 
     this.mixer.update(this.reducedMotion ? 0 : delta);
+    this.applyArmTuck();
   }
 
   dispose(): void {
@@ -242,6 +416,41 @@ export class Character {
     this.mixer.uncacheRoot(this.mixer.getRoot() as THREE.Object3D);
     disposeObject3D(this.root);
   }
+}
+
+type ArmSide = 'left' | 'right';
+
+/** Lateral arm angles in degrees: 0 is at the side, 90 is a T-pose. */
+interface ArmSpread {
+  leftBefore: number;
+  rightBefore: number;
+  leftAfter: number;
+  rightAfter: number;
+}
+
+interface ArmChain {
+  side: ArmSide;
+  bone: THREE.Bone;
+  elbow: THREE.Object3D;
+}
+
+/** Nearest descendant that reads as a forearm, or failing that, any child. */
+function findElbow(bone: THREE.Bone): THREE.Object3D | null {
+  let named: THREE.Object3D | null = null;
+  bone.traverse((child) => {
+    if (child === bone || named) return;
+    if (FOREARM_PATTERN.test(child.name)) named = child;
+  });
+  return named ?? bone.children.find((child) => (child as THREE.Bone).isBone) ?? null;
+}
+
+function isDescendantOf(node: THREE.Object3D, ancestor: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = node.parent;
+  while (current) {
+    if (current === ancestor) return true;
+    current = current.parent;
+  }
+  return false;
 }
 
 /** Opts the character into the scene's world-derived environment lighting. */

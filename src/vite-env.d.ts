@@ -48,6 +48,14 @@ interface ThreeGameDiagnostics {
     footCorrection: number;
     calibrationSamples: number[];
     calibrationNote: string;
+    armTuckTarget: number;
+    armSpread: {
+      leftBefore: number;
+      rightBefore: number;
+      leftAfter: number;
+      rightAfter: number;
+      bones: number;
+    };
     shadowVisible: boolean;
     shadowOpacity: number;
   };
@@ -64,6 +72,10 @@ interface ThreeGameTestHooks {
   setReducedMotion(enabled: boolean): void;
   /** Hide debug UI (lil-gui) before capturing. */
   hideDebugUi(hidden: boolean): void;
+  /** Advance the simulation without rAF, for deterministic headless checks. */
+  step(frames?: number, delta?: number): void;
+  /** Bone names and detected arm chain of the active character, or null. */
+  describeRig(): { bones: string[]; arms: Array<{ side: string; bone: string; elbow: string }> } | null;
   /** Raw collider vs visible-splat surface heights, for grounding diagnosis. */
   probeGround(
     x: number,

@@ -20,6 +20,8 @@ const STORAGE_WORLD = 'mint-playground.world';
 const STORAGE_CHARACTER = 'mint-playground.character';
 const STORAGE_GROUND_OFFSET_PREFIX = 'mint-playground.groundOffset.';
 const STORAGE_LIGHT_INTENSITY = 'mint-playground.lightIntensity';
+const STORAGE_ARM_TUCK = 'mint-playground.armTuck';
+const ARM_TUCK_STEP = 2;
 const GROUND_OFFSET_STEP = 0.02;
 const LIGHT_INTENSITY_STEP = 0.1;
 // Collider surfaces sit slightly below the visible splat surface. These are
@@ -74,6 +76,7 @@ export class Game {
   private pausedForScreenshot = false;
   private reducedMotion = false;
   private groundOffsetSource: 'measured' | 'default' | 'manual' | 'stored' = 'stored';
+  private armTuckTarget: number | null = null;
   private pendingCalibration:
     | { worldKey: string; framesLeft: number; attemptsLeft: number; rounds: number[] }
     | null = null;
@@ -239,6 +242,8 @@ export class Game {
       }
       this.character = next;
       this.character.setReducedMotion(this.reducedMotion);
+      if (this.armTuckTarget === null) this.armTuckTarget = this.loadArmTuck();
+      if (this.armTuckTarget !== null) next.setArmTuckTarget(this.armTuckTarget);
       next.root.position.copy(this.controller.position);
       next.root.rotation.y = this.controller.yaw;
       this.scene.add(next.root);
@@ -262,6 +267,7 @@ export class Game {
     }
     this.applyGroundOffsetSteps();
     this.applyLightSteps();
+    this.applyArmTuckSteps();
     if (this.input.consumeRebakeRequest()) {
       this.environment.requestBake(this.controller.position, this.hiddenDuringBake(), true);
       this.overlay.setStatus('Re-baking world light…', 'loading');
@@ -425,6 +431,22 @@ export class Game {
     return Number.isFinite(value) ? value : 1;
   }
 
+  private loadArmTuck(): number | null {
+    const stored = localStorage.getItem(STORAGE_ARM_TUCK);
+    if (stored === null) return null;
+    const value = Number.parseFloat(stored);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  private applyArmTuckSteps(): void {
+    const steps = this.input.consumeArmTuckSteps();
+    if (steps === 0 || !this.character) return;
+    const target = this.character.setArmTuckTarget(this.character.armTuck + steps * ARM_TUCK_STEP);
+    this.armTuckTarget = target;
+    localStorage.setItem(STORAGE_ARM_TUCK, target.toFixed(1));
+    this.overlay.setStatus(`Arm tuck: ${target.toFixed(0)}°`, 'ready');
+  }
+
   private applyLightSteps(): void {
     const steps = this.input.consumeLightSteps();
     if (steps === 0) return;
@@ -462,6 +484,12 @@ export class Game {
       hideDebugUi: (hidden: boolean) => {
         this.overlay.setHidden(hidden);
       },
+      // Drives the simulation without requestAnimationFrame, so headless
+      // checks can advance and measure the game deterministically.
+      step: (frames = 1, delta = 1 / 60) => {
+        for (let i = 0; i < frames; i += 1) this.update(delta, this.elapsed);
+      },
+      describeRig: () => this.character?.describeRig() ?? null,
       probeGround: (x: number, z: number, fromY: number, reach: number) => ({
         collider: this.controller.sampleColliderHeight(x, z, this.worlds.colliderMeshes),
         splat: this.worlds.sampleSplatHeight(x, z, fromY, reach),
@@ -509,6 +537,14 @@ export class Game {
         footCorrection: this.character?.footCorrection ?? 0,
         calibrationSamples: this.calibrationSamples,
         calibrationNote: this.calibrationNote,
+        armTuckTarget: this.character?.armTuck ?? 0,
+        armSpread: this.character?.armSpread ?? {
+          leftBefore: 0,
+          rightBefore: 0,
+          leftAfter: 0,
+          rightAfter: 0,
+          bones: 0,
+        },
         shadowVisible: this.contactShadow.mesh.visible,
         shadowOpacity: (this.contactShadow.mesh.material as THREE.Material).opacity,
       },
