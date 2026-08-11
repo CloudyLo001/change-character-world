@@ -1,0 +1,356 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0b0b12;
+  color: #e8e8f0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+#overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s ease;
+}
+
+#overlay.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#status-line {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(12, 12, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+}
+
+#status-line[data-kind='error'] {
+  border-color: rgba(255, 108, 108, 0.55);
+  color: #ffb4b4;
+}
+
+#status-line[data-kind='loading'] {
+  color: #b9c6ff;
+}
+
+#status-line.is-hidden {
+  display: none;
+}
+
+#controls-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(12, 12, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+}
+
+.select-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #aab;
+}
+
+.select-group select {
+  background: #191926;
+  color: #e8e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  max-width: 180px;
+}
+
+#hint-line {
+  font-size: 11px;
+  color: #778;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  #controls-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 92vw;
+  }
+
+  #hint-line {
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+#settings-open {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  line-height: 1;
+  color: #e8e8f0;
+  background: rgba(12, 12, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+#settings-open:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+#settings-open.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#settings-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 17, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+#settings-panel.is-hidden {
+  display: none;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #aab;
+}
+
+#settings-close {
+  background: none;
+  border: none;
+  color: #889;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+#settings-close:hover {
+  color: #e8e8f0;
+}
+
+.settings-body {
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-action {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.settings-action:hover {
+  border-color: rgba(150, 170, 255, 0.6);
+  background: rgba(90, 110, 200, 0.1);
+}
+
+.settings-action input[type='file'] {
+  display: none;
+}
+
+.settings-action-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-action-hint {
+  font-size: 11px;
+  color: #889;
+  line-height: 1.45;
+}
+
+#settings-status {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #aab;
+  min-height: 1em;
+}
+
+#settings-status[data-state='error'] {
+  color: #ffb4b4;
+}
+
+#settings-status[data-state='done'] {
+  color: #b9ffd0;
+}
+
+#settings-status[data-state='busy'] {
+  color: #b9c6ff;
+}
+
+#settings-usage {
+  margin: 0;
+  font-size: 11px;
+  color: #667;
+}
+
+.settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+
+.settings-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-row-action {
+  flex: none;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: #ccd;
+  font-size: 10.5px;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+
+.settings-row-action:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.settings-import {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-request {
+  display: block;
+  padding: 7px 9px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+  color: #b9c6ff;
+  background: rgba(90, 110, 200, 0.12);
+  border-radius: 8px;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.settings-import-row {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-import-row select,
+.settings-import-row input {
+  background: #191926;
+  color: #e8e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  font-family: inherit;
+}
+
+.settings-import-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-import-row button {
+  background: #2b2b40;
+  color: #e8e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.settings-import-row button:hover {
+  border-color: rgba(150, 170, 255, 0.6);
+}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b12" />
+    <title>Splat Playground</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game-canvas" aria-label="Third-person character playground"></canvas>
+      <button id="settings-open" type="button" title="Assets and uploads" aria-label="Assets and uploads">⚙</button>
+
+      <section id="settings-panel" class="is-hidden" aria-label="Asset library">
+        <header class="settings-head">
+          <h2>Assets</h2>
+          <button id="settings-close" type="button" aria-label="Close">✕</button>
+        </header>
+
+        <div class="settings-body">
+          <div class="settings-group">
+            <label class="settings-action" for="upload-world">
+              <span class="settings-action-title">Add a world</span>
+              <span class="settings-action-hint">Mint export: .rad, .spz or .ply (add a collider .glb too if you have one)</span>
+              <input id="upload-world" type="file" accept=".rad,.spz,.ply,.splat,.ksplat,.glb" multiple />
+            </label>
+
+            <label class="settings-action" for="upload-character">
+              <span class="settings-action-title">Add a character</span>
+              <span class="settings-action-hint">Rigged .glb plus its animation clip .glb files — select them all at once</span>
+              <input id="upload-character" type="file" accept=".glb" multiple />
+            </label>
+          </div>
+
+          <p id="settings-status" data-state="idle"></p>
+          <p id="settings-usage"></p>
+
+          <ul id="settings-assets" class="settings-list"></ul>
+
+          <div class="settings-group">
+            <span class="settings-action-title">Import from Mint by link</span>
+            <span class="settings-action-hint">Mint's API can't be reached from the browser, so this queues a request for Claude, who runs the import and rigs the character if it can't walk.</span>
+            <div class="settings-import-row">
+              <select id="import-kind" aria-label="Import type">
+                <option value="world">World</option>
+                <option value="character">Character</option>
+              </select>
+              <input id="import-link" type="text" placeholder="mint.gg link or asset ID" />
+              <button id="import-queue" type="button">Queue</button>
+            </div>
+          </div>
+
+          <ul id="settings-imports" class="settings-list"></ul>
+        </div>
+      </section>
+
+      <section id="overlay" aria-live="polite">
+        <div id="status-line" data-kind="loading">Loading…</div>
+        <div id="controls-row">
+          <label class="select-group">
+            <span>World</span>
+            <select id="world-select"></select>
+          </label>
+          <label class="select-group">
+            <span>Character</span>
+            <select id="character-select"></select>
+          </label>
+          <div id="hint-line">WASD move · Shift run · Space jump · drag orbit · [ ] ground · , . light · L relight · H hide</div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

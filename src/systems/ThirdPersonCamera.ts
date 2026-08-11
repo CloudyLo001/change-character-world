@@ -1,0 +1,63 @@
+import * as THREE from 'three';
+
+const ORBIT_SENSITIVITY = 0.0052;
+const ZOOM_SENSITIVITY = 0.0016;
+const MIN_PITCH = -0.1;
+const MAX_PITCH = 1.25;
+const MIN_DISTANCE = 1.8;
+const MAX_DISTANCE = 9;
+const FOLLOW_LAMBDA = 10;
+const HEAD_OFFSET = 1.5;
+
+/** Smoothed third-person follow camera orbiting the character. */
+export class ThirdPersonCamera {
+  yaw = 0;
+  pitch = 0.32;
+  distance = 4.2;
+
+  private readonly followTarget = new THREE.Vector3();
+  private readonly desired = new THREE.Vector3();
+
+  constructor(private readonly camera: THREE.PerspectiveCamera) {}
+
+  snapTo(position: THREE.Vector3): void {
+    this.followTarget.copy(position).y += HEAD_OFFSET;
+    this.applyPosition(1);
+  }
+
+  update(
+    delta: number,
+    position: THREE.Vector3,
+    orbitDelta: THREE.Vector2,
+    zoomDelta: number,
+  ): void {
+    this.yaw -= orbitDelta.x * ORBIT_SENSITIVITY;
+    this.pitch = THREE.MathUtils.clamp(
+      this.pitch + orbitDelta.y * ORBIT_SENSITIVITY,
+      MIN_PITCH,
+      MAX_PITCH,
+    );
+    this.distance = THREE.MathUtils.clamp(
+      this.distance * (1 + zoomDelta * ZOOM_SENSITIVITY),
+      MIN_DISTANCE,
+      MAX_DISTANCE,
+    );
+
+    const target = position.clone();
+    target.y += HEAD_OFFSET;
+    const lerp = 1 - Math.exp(-FOLLOW_LAMBDA * delta);
+    this.followTarget.lerp(target, lerp);
+    this.applyPosition(lerp);
+  }
+
+  private applyPosition(_lerp: number): void {
+    const offset = new THREE.Vector3(
+      Math.sin(this.yaw) * Math.cos(this.pitch),
+      Math.sin(this.pitch),
+      Math.cos(this.yaw) * Math.cos(this.pitch),
+    ).multiplyScalar(this.distance);
+    this.desired.copy(this.followTarget).add(offset);
+    this.camera.position.copy(this.desired);
+    this.camera.lookAt(this.followTarget);
+  }
+}

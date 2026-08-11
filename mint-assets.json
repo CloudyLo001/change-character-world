@@ -1,0 +1,734 @@
+{
+  "registryVersion": 1,
+  "mintProject": {
+    "projectId": "zd7d9nade8mq0rqehdtrg18tth8bm7wf",
+    "name": "First Project"
+  },
+  "assetRoot": "public/assets/mint",
+  "assets": {
+    "character-android": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "animation",
+        "assetType": "model_animation_batch",
+        "assetId": "w57fpmwxf7ybd9k80kn5pvbg3s8c9atn"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "local_files",
+      "artifacts": {
+        "clip:w970nkv19413gspvpmg0yhb4bn8c8b2b:animation_glb": {
+          "artifactId": "clip:w970nkv19413gspvpmg0yhb4bn8c8b2b:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "walking-2-inplace-bn8c8b2b.glb",
+          "localPath": "public/assets/mint/character-android/clip-w970nkv19413gspvpmg0yhb4bn8c8b2b-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 3557164,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w975vmt2drdbhpxv7n8kmhyty98c8ssj:animation_glb": {
+          "artifactId": "clip:w975vmt2drdbhpxv7n8kmhyty98c8ssj:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "idle-y98c8ssj.glb",
+          "localPath": "public/assets/mint/character-android/clip-w975vmt2drdbhpxv7n8kmhyty98c8ssj-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 3590020,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w977bg27geewf5fydxtz8yrccx8c8037:animation_glb": {
+          "artifactId": "clip:w977bg27geewf5fydxtz8yrccx8c8037:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "lean-forward-sprint-inplace-cx8c8037.glb",
+          "localPath": "public/assets/mint/character-android/clip-w977bg27geewf5fydxtz8yrccx8c8037-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 3550556,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w978kg1qyz9dcnwcc8thfp7w718c800c:animation_glb": {
+          "artifactId": "clip:w978kg1qyz9dcnwcc8thfp7w718c800c:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "regular-jump-718c800c.glb",
+          "localPath": "public/assets/mint/character-android/clip-w978kg1qyz9dcnwcc8thfp7w718c800c-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 3566688,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "rigged_character_glb": {
+          "artifactId": "rigged_character_glb",
+          "role": "rigged_character",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "cyan-optic-sentinel-3s8c9atn-rigged.glb",
+          "localPath": "public/assets/mint/character-android/rigged_character_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 3542988,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        }
+      }
+    },
+    "character-knight": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "animation",
+        "assetType": "model_animation_batch",
+        "assetId": "w57e8zjmqqtart6bqtj0xvkkqh8c85n4"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "local_files",
+      "artifacts": {
+        "clip:w971jmy2vyp3hny671vat56k4n8c8eed:animation_glb": {
+          "artifactId": "clip:w971jmy2vyp3hny671vat56k4n8c8eed:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "idle-4n8c8eed.glb",
+          "localPath": "public/assets/mint/character-knight/clip-w971jmy2vyp3hny671vat56k4n8c8eed-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4758908,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w9760cvpq8x9zjp6w3p5xyebah8c9ckd:animation_glb": {
+          "artifactId": "clip:w9760cvpq8x9zjp6w3p5xyebah8c9ckd:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "walking-2-inplace-ah8c9ckd.glb",
+          "localPath": "public/assets/mint/character-knight/clip-w9760cvpq8x9zjp6w3p5xyebah8c9ckd-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4724548,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97bvta213kcb75rvmxn622vnx8c9c6r:animation_glb": {
+          "artifactId": "clip:w97bvta213kcb75rvmxn622vnx8c9c6r:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "lean-forward-sprint-inplace-nx8c9c6r.glb",
+          "localPath": "public/assets/mint/character-knight/clip-w97bvta213kcb75rvmxn622vnx8c9c6r-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4717512,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97dbycmvsn915mqwrp5qj6ngh8c8eaw:animation_glb": {
+          "artifactId": "clip:w97dbycmvsn915mqwrp5qj6ngh8c8eaw:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "regular-jump-gh8c8eaw.glb",
+          "localPath": "public/assets/mint/character-knight/clip-w97dbycmvsn915mqwrp5qj6ngh8c8eaw-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4732756,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "rigged_character_glb": {
+          "artifactId": "rigged_character_glb",
+          "role": "rigged_character",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "silver-plate-sentinel-qh8c85n4-rigged.glb",
+          "localPath": "public/assets/mint/character-knight/rigged_character_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4709956,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        }
+      }
+    },
+    "character-superhero": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "animation",
+        "assetType": "model_animation_batch",
+        "assetId": "w576kzxv0efw98sdhfjy1c1r3h8c9w4r"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "local_files",
+      "artifacts": {
+        "clip:w973a7gtq7m3eafzybvm947qz18c8qd4:animation_glb": {
+          "artifactId": "clip:w973a7gtq7m3eafzybvm947qz18c8qd4:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "lean-forward-sprint-inplace-z18c8qd4.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-w973a7gtq7m3eafzybvm947qz18c8qd4-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4575816,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97cx8z9q2r73db277qmgy97018c97mj:animation_glb": {
+          "artifactId": "clip:w97cx8z9q2r73db277qmgy97018c97mj:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "regular-jump-018c97mj.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-w97cx8z9q2r73db277qmgy97018c97mj-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4591952,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97decr6847086fftvwkyvwnk58c8pqw:animation_glb": {
+          "artifactId": "clip:w97decr6847086fftvwkyvwnk58c8pqw:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "walking-2-inplace-k58c8pqw.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-w97decr6847086fftvwkyvwnk58c8pqw-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4582424,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97dnc6zemje7tjf1n3gq8tay18c97n7:animation_glb": {
+          "artifactId": "clip:w97dnc6zemje7tjf1n3gq8tay18c97n7:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "idle-y18c97n7.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-w97dnc6zemje7tjf1n3gq8tay18c97n7-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4617196,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "rigged_character_glb": {
+          "artifactId": "rigged_character_glb",
+          "role": "rigged_character",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "purple-hooded-sentinel-3h8c9w4r-rigged.glb",
+          "localPath": "public/assets/mint/character-superhero/rigged_character_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 4568252,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        }
+      }
+    },
+    "world-anime-grassland": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "world",
+        "assetId": "j97b93pe688pw79my051qfpr7s8bfrpx"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "remote_stream",
+      "runtime": {
+        "artifactId": "world_runtime_rad",
+        "role": "environment",
+        "format": "rad",
+        "runtimeUrl": "https://cdn.mint.gg/rad/open-grassland-clearing-83f2812d52c9fe3b-lod.rad",
+        "renderer": "@sparkjsdev/spark",
+        "loaderHint": {
+          "renderer": "SparkRenderer",
+          "mesh": "SplatMesh",
+          "paged": true,
+          "lod": false
+        },
+        "collider": {
+          "artifactId": "world_collider",
+          "role": "physics_collider",
+          "format": "glb",
+          "runtimeUrl": "https://cdn.mint.gg/worlds/open-grassland-clearing-collider-f499e7f7889e4161.glb",
+          "loaderHint": "gltf",
+          "visible": false,
+          "requiredForPhysics": true
+        },
+        "byteSize": 35929880
+      },
+      "artifacts": {
+        "preview_image": {
+          "artifactId": "preview_image",
+          "role": "preview_image",
+          "format": "webp",
+          "contentType": "image/webp",
+          "filename": "open-anime-grassland-7s8bfrpx-preview.webp",
+          "localPath": "public/assets/mint/world-anime-grassland/preview_image.webp",
+          "loaderHint": "image",
+          "byteSize": 14030
+        }
+      },
+      "thumbnailUrl": "public/assets/mint/world-anime-grassland/preview_image.webp"
+    },
+    "world-cinema": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "world",
+        "assetId": "j97cyknnqcstmz2eszc7g4qhgx8bzk73"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "remote_stream",
+      "runtime": {
+        "artifactId": "world_runtime_rad",
+        "role": "environment",
+        "format": "rad",
+        "runtimeUrl": "https://cdn.mint.gg/rad/modern-movie-palace-e7aaa4cd09f1e2f7-lod.rad",
+        "renderer": "@sparkjsdev/spark",
+        "loaderHint": {
+          "renderer": "SparkRenderer",
+          "mesh": "SplatMesh",
+          "paged": true,
+          "lod": false
+        },
+        "collider": {
+          "artifactId": "world_collider",
+          "role": "physics_collider",
+          "format": "glb",
+          "runtimeUrl": "https://cdn.mint.gg/worlds/modern-movie-palace-collider-b26673696be72fbe.glb",
+          "loaderHint": "gltf",
+          "visible": false,
+          "requiredForPhysics": true
+        },
+        "byteSize": 44257152
+      },
+      "artifacts": {
+        "preview_image": {
+          "artifactId": "preview_image",
+          "role": "preview_image",
+          "format": "webp",
+          "contentType": "image/webp",
+          "filename": "cinema-palace-auditorium-gx8bzk73-preview.webp",
+          "localPath": "public/assets/mint/world-cinema/preview_image.webp",
+          "loaderHint": "image",
+          "byteSize": 31196
+        }
+      },
+      "thumbnailUrl": "public/assets/mint/world-cinema/preview_image.webp"
+    },
+    "world-grassland": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "world",
+        "assetId": "j975gt70b21yc1wk8mhkmhrhx18bfh38"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "remote_stream",
+      "runtime": {
+        "artifactId": "world_runtime_rad",
+        "role": "environment",
+        "format": "rad",
+        "runtimeUrl": "https://cdn.mint.gg/rad/anime-grassland-horizon-fd50404914190122-lod.rad",
+        "renderer": "@sparkjsdev/spark",
+        "loaderHint": {
+          "renderer": "SparkRenderer",
+          "mesh": "SplatMesh",
+          "paged": true,
+          "lod": false
+        },
+        "collider": {
+          "artifactId": "world_collider",
+          "role": "physics_collider",
+          "format": "glb",
+          "runtimeUrl": "https://cdn.mint.gg/worlds/anime-grassland-horizon-collider-9d4019e32fcbbb42.glb",
+          "loaderHint": "gltf",
+          "visible": false,
+          "requiredForPhysics": true
+        },
+        "byteSize": 31002584
+      },
+      "artifacts": {
+        "preview_image": {
+          "artifactId": "preview_image",
+          "role": "preview_image",
+          "format": "webp",
+          "contentType": "image/webp",
+          "filename": "open-grassland-horizon-x18bfh38-preview.webp",
+          "localPath": "public/assets/mint/world-grassland/preview_image.webp",
+          "loaderHint": "image",
+          "byteSize": 33872
+        }
+      },
+      "thumbnailUrl": "public/assets/mint/world-grassland/preview_image.webp"
+    },
+    "world-neon-city": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "world",
+        "assetId": "j979j3489mv35z5zhf1a7rme118c9yf2"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "remote_stream",
+      "runtime": {
+        "artifactId": "world_runtime_rad",
+        "role": "environment",
+        "format": "rad",
+        "runtimeUrl": "https://cdn.mint.gg/rad/neon-times-square-night-699f949a08218b2b-lod.rad",
+        "renderer": "@sparkjsdev/spark",
+        "loaderHint": {
+          "renderer": "SparkRenderer",
+          "mesh": "SplatMesh",
+          "paged": true,
+          "lod": false
+        },
+        "collider": {
+          "artifactId": "world_collider",
+          "role": "physics_collider",
+          "format": "glb",
+          "runtimeUrl": "https://cdn.mint.gg/worlds/neon-times-square-night-collider-95a9c1dc5999a6e4.glb",
+          "loaderHint": "gltf",
+          "visible": false,
+          "requiredForPhysics": true
+        },
+        "byteSize": 44999568
+      },
+      "artifacts": {
+        "preview_image": {
+          "artifactId": "preview_image",
+          "role": "preview_image",
+          "format": "webp",
+          "contentType": "image/webp",
+          "filename": "neon-times-square-rain-118c9yf2-preview.webp",
+          "localPath": "public/assets/mint/world-neon-city/preview_image.webp",
+          "loaderHint": "image",
+          "byteSize": 41668
+        }
+      },
+      "thumbnailUrl": "public/assets/mint/world-neon-city/preview_image.webp"
+    },
+    "world-target-range": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "world",
+        "assetId": "j973wgpk49tx3qwqtjwkys3mw98c3a74"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "remote_stream",
+      "runtime": {
+        "artifactId": "world_runtime_rad",
+        "role": "environment",
+        "format": "rad",
+        "runtimeUrl": "https://cdn.mint.gg/rad/dark-target-range-facility-09e67901c5114154-lod.rad",
+        "renderer": "@sparkjsdev/spark",
+        "loaderHint": {
+          "renderer": "SparkRenderer",
+          "mesh": "SplatMesh",
+          "paged": true,
+          "lod": false
+        },
+        "collider": {
+          "artifactId": "world_collider",
+          "role": "physics_collider",
+          "format": "glb",
+          "runtimeUrl": "https://cdn.mint.gg/worlds/dark-target-range-facility-collider-b255349125f41e73.glb",
+          "loaderHint": "gltf",
+          "visible": false,
+          "requiredForPhysics": true
+        },
+        "byteSize": 43279328
+      },
+      "artifacts": {
+        "preview_image": {
+          "artifactId": "preview_image",
+          "role": "preview_image",
+          "format": "webp",
+          "contentType": "image/webp",
+          "filename": "industrial-target-range-w98c3a74-preview.webp",
+          "localPath": "public/assets/mint/world-target-range/preview_image.webp",
+          "loaderHint": "image",
+          "byteSize": 17594
+        }
+      },
+      "thumbnailUrl": "public/assets/mint/world-target-range/preview_image.webp"
+    }
+  }
+}
