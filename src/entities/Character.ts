@@ -56,6 +56,8 @@ const FRONTAL_FADE_IN = 0.18;
 const FRONTAL_FADE_OUT = 0.42;
 const DOWNWARD_FADE = 0.25;
 const CHARACTER_ENV_MAP_INTENSITY = 1;
+/** Fraction of a borrowed clip's tracks that must bind for it to be usable. */
+const MIN_CLIP_BINDING = 0.6;
 
 /**
  * A rigged Mint character driven by a small locomotion blend tree: idle, walk,
@@ -75,6 +77,8 @@ export class Character {
   };
   private jumping = false;
   private locomotionSynced = false;
+  private readonly borrowed: ClipRole[];
+  private readonly rigged: boolean;
   private reducedMotion = false;
   /** How far the posed feet had to be corrected off the bind-pose estimate. */
   readonly footCorrection: number;
@@ -107,7 +111,10 @@ export class Character {
     readonly entry: CharacterEntry,
     model: THREE.Group,
     clips: Partial<Record<ClipRole, THREE.AnimationClip>>,
+    rig: { borrowed: ClipRole[]; hasSkeleton: boolean },
   ) {
+    this.borrowed = rig.borrowed;
+    this.rigged = rig.hasSkeleton;
     // Normalize every character to the same gameplay height and put the feet
     // at the root origin so swaps never change how the controller behaves.
     const bounds = new THREE.Box3().setFromObject(model);
@@ -331,19 +338,55 @@ export class Character {
       const clip = clipGltf.animations[0];
       if (clip) clips[role] = clip;
     }
-    // A character uploaded with its clips baked into the GLB, or with no clips
-    // at all, still needs something to stand in as idle.
+    // A character whose clips are baked into the model GLB still needs
+    // something to stand in as idle.
     if (!clips.idle && modelGltf.animations[0]) clips.idle = modelGltf.animations[0];
-    if (Object.keys(clips).length === 0 && modelGltf.animations.length > 0) {
-      clips.idle = modelGltf.animations[0];
+
+    // Anything still missing is borrowed from the shared locomotion set. An
+    // animation track binds to a node by name, so a clip authored for one rig
+    // plays on any skeleton using the same bone names — which is what lets an
+    // uploaded character walk without being rigged again.
+    const skeleton = collectBoneNames(modelGltf.scene);
+    const borrowed: ClipRole[] = [];
+    if (skeleton.size > 0) {
+      for (const role of roles) {
+        if (clips[role]) continue;
+        const shared = await loadSharedClip(role, loader);
+        if (!shared) continue;
+        const fitted = fitClipToSkeleton(shared, skeleton);
+        if (!fitted) continue;
+        clips[role] = fitted;
+        borrowed.push(role);
+      }
     }
 
-    return new Character(entry, modelGltf.scene, clips);
+    return new Character(entry, modelGltf.scene, clips, {
+      borrowed,
+      hasSkeleton: skeleton.size > 0,
+    });
   }
 
   /** Locomotion roles this character actually has clips for. */
   get availableRoles(): ClipRole[] {
     return [...this.actions.keys()];
+  }
+
+  /** Roles playing borrowed animation rather than the character's own. */
+  get borrowedRoles(): ClipRole[] {
+    return [...this.borrowed];
+  }
+
+  /** False for a plain mesh, which nothing can animate. */
+  get hasSkeleton(): boolean {
+    return this.rigged;
+  }
+
+  /** How the character is animated, for the UI to report honestly. */
+  get animationSource(): 'own' | 'borrowed' | 'partial' | 'none' {
+    if (!this.rigged) return 'none';
+    if (this.actions.size === 0) return 'none';
+    if (this.borrowed.length === 0) return 'own';
+    return this.borrowed.length >= this.actions.size ? 'borrowed' : 'partial';
   }
 
   /** Call once on the frame the controller launches a jump. */
@@ -415,6 +458,10 @@ export class Character {
    */
   private applyArmTuck(): void {
     if (this.arms.length === 0 || this.armNarrowing <= 0.001) return;
+    // The correction premultiplies onto whatever the mixer just wrote. With no
+    // clip driving the skeleton nothing rewrites it, so applying again each
+    // frame would compound until the arms folded into the body.
+    if (this.actions.size === 0) return;
     this.root.updateMatrixWorld(true);
     this.root.getWorldQuaternion(this.rootQuaternion);
     this.rootInverse.copy(this.rootQuaternion).invert();
@@ -623,6 +670,89 @@ function findElbow(bone: THREE.Bone): THREE.Object3D | null {
     if (FOREARM_PATTERN.test(child.name)) named = child;
   });
   return named ?? bone.children.find((child) => (child as THREE.Bone).isBone) ?? null;
+}
+
+/** Shared locomotion clips, cached so every character reuses one parse. */
+const sharedClipCache = new Map<ClipRole, Promise<THREE.AnimationClip | null>>();
+
+function sharedClipUrl(role: ClipRole): string {
+  return `${import.meta.env.BASE_URL}assets/clips/${role}.glb`;
+}
+
+async function loadSharedClip(
+  role: ClipRole,
+  loader: ReturnType<typeof createMintGltfLoader>,
+): Promise<THREE.AnimationClip | null> {
+  let pending = sharedClipCache.get(role);
+  if (!pending) {
+    pending = loader
+      .loadAsync(sharedClipUrl(role))
+      .then((gltf) => gltf.animations[0] ?? null)
+      .catch((error) => {
+        console.warn(`Shared ${role} clip unavailable.`, error);
+        return null;
+      });
+    sharedClipCache.set(role, pending);
+  }
+  return pending;
+}
+
+function collectBoneNames(model: THREE.Object3D): Set<string> {
+  const names = new Set<string>();
+  model.traverse((object) => {
+    if ((object as THREE.Bone).isBone) names.add(object.name);
+  });
+  return names;
+}
+
+/**
+ * Rewrites a clip's track names onto the target skeleton when the two rigs use
+ * the same bones under different spellings — `mixamorig:LeftArm` vs `LeftArm`,
+ * or `upper_arm.L` vs `LeftUpperArm`. Returns null when too little of the clip
+ * binds, which is better than playing a clip that only moves half the body.
+ */
+function fitClipToSkeleton(
+  clip: THREE.AnimationClip,
+  boneNames: Set<string>,
+): THREE.AnimationClip | null {
+  const trackNode = (track: THREE.KeyframeTrack) => track.name.split('.')[0];
+  const direct = clip.tracks.filter((track) => boneNames.has(trackNode(track))).length;
+  if (direct === clip.tracks.length) return clip;
+
+  const normalized = new Map<string, string>();
+  for (const name of boneNames) normalized.set(normalizeBoneName(name), name);
+
+  const fitted = clip.clone();
+  let bound = 0;
+  for (const track of fitted.tracks) {
+    const node = trackNode(track);
+    if (boneNames.has(node)) {
+      bound += 1;
+      continue;
+    }
+    const match = normalized.get(normalizeBoneName(node));
+    if (match) {
+      track.name = `${match}${track.name.slice(node.length)}`;
+      bound += 1;
+    }
+  }
+
+  // Below this the rig is simply a different skeleton, not a naming variant.
+  if (bound / fitted.tracks.length < MIN_CLIP_BINDING) return null;
+  return fitted;
+}
+
+/** Collapses common rig naming conventions to a comparable form. */
+function normalizeBoneName(name: string): string {
+  let value = name.toLowerCase();
+  value = value.replace(/^mixamorig[:_]?/, '');
+  // Trailing side markers (`arm.l`, `arm_r`) become a leading word instead, so
+  // they line up with `leftarm` / `rightarm`.
+  const side = /[._-]([lr])$/.exec(value);
+  if (side) {
+    value = `${side[1] === 'l' ? 'left' : 'right'}${value.slice(0, side.index)}`;
+  }
+  return value.replace(/[^a-z0-9]/g, '');
 }
 
 /** Smooth 0..1 ramp, so corrections fade in rather than switching on. */

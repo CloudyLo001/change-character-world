@@ -4,4 +4,3 @@ test-results/
 artifacts/
 *.log
 .DS_Store
-artifacts/locomotion/

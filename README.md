@@ -69,9 +69,10 @@ time and derives the switcher catalog from it:
 - **Worlds** are `mode: "remote_stream"` entries: a Mint CDN RAD splat URL plus
   a collider GLB URL. Nothing is downloaded into the repo; the splat streams at
   runtime. The collider is loaded invisibly and drives ground/wall collision.
-- **Characters** are synced local files under `public/assets/mint/<key>/`: one
-  `rigged_character` GLB plus `animation_clip` GLBs. Clip roles (idle / walk /
-  run / jump) are matched from the recorded clip filenames.
+- **Characters** are a `rigged_character` GLB under
+  `public/assets/mint/<key>/`. Animation comes from the shared clip set in
+  `public/assets/clips/` unless a character ships its own; clip roles (idle /
+  walk / run / jump) are matched from filenames.
 - Each entry has an editable `transform`. Worlds with an identity transform get
   the standard World Labs calibration (rotation `[π, π, 0]`, scale `2.5`,
   y `1.5`) applied to the shared splat+collider root automatically.
@@ -142,6 +143,33 @@ via Mint MCP into the same Mint Project), then sync it into the registry:
 
 Keys are stable and reusable: re-syncing the same key replaces that asset.
 
+## Uploading a character that has no animation
+
+An animation track binds to a bone **by name**, so a clip authored for one rig
+plays on any skeleton using the same bone names. Upload a rigged character on
+its own and it borrows the shared locomotion set immediately — no rigging step,
+no credits. The panel and the status line say when animation is borrowed rather
+than the character's own, and a badly-matched skeleton is rejected instead of
+being animated half-way.
+
+Two things worth knowing:
+
+- **Mint cannot rig a file you upload.** `animate_generated_model` takes a Mint
+  asset ID; there is no way to push a file back into Mint. What it *can* do is
+  rig and animate an asset already in your account, even one with no skeleton —
+  that is how the built-in characters were made. So the route for a Mint
+  character is its link, not its file. The **Rig in Mint** button on each
+  uploaded character copies a ready-made request for exactly that, including
+  the filename, which carries the Mint asset slug.
+- **A plain mesh with no skeleton cannot be animated by anything.** Mint's
+  ordinary model download is unrigged. It loads so you can look at it and is
+  clearly marked `no skeleton, cannot be animated`; rigging it in Mint is the
+  fix.
+
+The shared clips are produced by `scripts/extract-clips.mjs`, which strips the
+character mesh Mint bakes into every clip file — a 4.7 MB walk clip becomes
+72 KB, and the same clips then serve every character.
+
 ## Deploying
 
 Pushing to `main` builds the site and publishes it to GitHub Pages via
@@ -157,11 +185,10 @@ somewhere else:
 BASE_PATH=/ npm run build
 ```
 
-Character GLBs are committed and served from the site (~62 MB), while splat
-worlds stream from the Mint CDN at runtime, so they cost nothing in the repo.
-Note that Mint bakes the full skinned mesh into every animation clip, which is
-why a single character is ~20 MB. Uploaded assets stay in the visitor's own
-browser and are never part of a deploy.
+Character GLBs are committed and served from the site (~13 MB — one mesh each
+plus ~210 KB of shared clips), while splat worlds stream from the Mint CDN at
+runtime, so they cost nothing in the repo. Uploaded assets stay in the visitor's
+own browser and are never part of a deploy.
 
 ## Project layout
 

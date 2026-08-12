@@ -136,20 +136,23 @@ export class SettingsPanel {
       return;
     }
 
-    // Mint names the rigged mesh "…-rigged.glb" and the clips after their
-    // motion, so the largest non-clip GLB is the character when in doubt.
-    const roles = assignClipRolesByName(glbs, (file) => file.name);
+    // Pick the character mesh first and hold it out of role matching. Matching
+    // everything at once let a model named like "hero-walking-rigged.glb" claim
+    // the walk role, which was then dropped for being the model — silently
+    // losing the real walk clip.
     const explicitModel = glbs.find((file) => /rigged|character|model/i.test(file.name));
+    const provisionalRoles = assignClipRolesByName(glbs, (file) => file.name);
     const model =
       explicitModel ??
-      glbs.filter((file) => !roles.has(file)).sort((a, b) => b.size - a.size)[0] ??
-      glbs[0];
+      glbs.filter((file) => !provisionalRoles.has(file)).sort((a, b) => b.size - a.size)[0] ??
+      [...glbs].sort((a, b) => b.size - a.size)[0];
 
-    const clips: StoredClipUpload[] = [];
-    for (const [file, role] of roles) {
-      if (file === model) continue;
-      clips.push({ role: role as ClipRole, file });
-    }
+    const clipCandidates = glbs.filter((file) => file !== model);
+    const roles = assignClipRolesByName(clipCandidates, (file) => file.name);
+    const clips: StoredClipUpload[] = [...roles].map(([file, role]) => ({
+      role: role as ClipRole,
+      file,
+    }));
 
     this.setStatus(`Storing ${model.name}…`, 'busy');
     try {
@@ -162,7 +165,8 @@ export class SettingsPanel {
       this.setStatus(
         missing.length === 0
           ? `Added "${asset.label}" with walk, run and jump.`
-          : `Added "${asset.label}", missing ${missing.join(', ')}. Queue a Mint rig below to animate it.`,
+          : `Added "${asset.label}" — borrowing ${missing.join(', ')} from the built-in set. ` +
+              'Rig it in Mint below for animation made for this character.',
         'done',
       );
     } catch (error) {
@@ -210,9 +214,28 @@ export class SettingsPanel {
           ? asset.world?.colliderFileId
             ? 'world · collider'
             : 'world · splat ground'
-          : `character · ${asset.character?.clips.map((clip) => clip.role).join(', ') || 'idle only'}`;
+          : characterDetail(asset);
       name.textContent = `${asset.label} — ${detail} · ${formatBytes(asset.bytes)}`;
       row.append(name);
+
+      if (asset.kind === 'character') {
+        row.append(
+          this.rowButton('Rig in Mint', async () => {
+            // The uploaded filename carries the Mint asset slug, which is how
+            // the source asset gets found again on the Mint side.
+            await this.library.addImport(
+              'character',
+              asset.character?.modelFileName ?? asset.label,
+              asset.label,
+            );
+            await this.refresh();
+            this.setStatus(
+              `Queued a Mint rig for "${asset.label}" — copy the request below and paste it to Claude.`,
+              'done',
+            );
+          }),
+        );
+      }
 
       row.append(
         this.rowButton('Rename', async () => {
@@ -322,7 +345,20 @@ function selectText(element: HTMLElement): void {
 function importRequestText(record: PendingImport): string {
   return record.kind === 'world'
     ? `Import this Mint world into the splat playground and sync it into mint-assets.json: ${record.reference}`
-    : `Import this Mint character into the splat playground: ${record.reference}. Rig it with the natural locomotion clips (idle 0, walking_2 692, lean forward sprint 644, regular jump 466) if it has no walk cycle, then sync it into mint-assets.json.`;
+    : `Rig this Mint character for the splat playground: ${record.reference}. ` +
+        'Find the matching model in my Mint account, run animate_generated_model with action IDs ' +
+        '[0 idle, 652 Proud Strut inplace, 673 Standard Forward Charge inplace, 466 Regular Jump] ' +
+        '(keep it to 4 clips — larger custom batches fail), then sync it into mint-assets.json.';
+}
+
+/** Reports how an uploaded character is actually animated, without guessing. */
+function characterDetail(asset: StoredAsset): string {
+  const roles = asset.character?.clips.map((clip) => clip.role) ?? [];
+  if (roles.length === 0) return 'character · borrowing built-in animation';
+  const missing = (['walk', 'run', 'jump'] as ClipRole[]).filter((role) => !roles.includes(role));
+  return missing.length === 0
+    ? `character · own ${roles.join(', ')}`
+    : `character · own ${roles.join(', ')} · borrowing ${missing.join(', ')}`;
 }
 
 function prettyLabel(name: string): string {

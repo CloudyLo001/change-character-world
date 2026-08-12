@@ -253,7 +253,23 @@ export class Game {
       this.environment.requestBake(this.controller.position, this.hiddenDuringBake(), true);
       localStorage.setItem(STORAGE_CHARACTER, key);
       this.overlay.setSelected(null, key);
-      if (!this.worldLoading) this.overlay.setStatus(`${entry.label} ready`, 'ready');
+      if (!this.worldLoading) {
+        // A character that cannot be animated used to report "ready" exactly
+        // like a working one, which made a dead upload look like a live one.
+        const source = next.animationSource;
+        const note =
+          source === 'none'
+            ? next.hasSkeleton
+              ? ' — no animation available'
+              : ' — no skeleton, cannot be animated'
+            : source === 'own'
+              ? ' ready'
+              : ' ready · borrowed animation';
+        this.overlay.setStatus(
+          `${entry.label}${note}`,
+          source === 'none' ? 'error' : 'ready',
+        );
+      }
     } catch (error) {
       console.error('Character load failed:', error);
       if (token === this.characterToken) {
