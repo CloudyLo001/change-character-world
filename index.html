@@ -25,10 +25,15 @@
               <input id="upload-world" type="file" accept=".rad,.spz,.ply,.splat,.ksplat,.glb" multiple />
             </label>
 
+            <button id="character-import-open" class="settings-action" type="button">
+              <span class="settings-action-title">Add a character (guided)</span>
+              <span class="settings-action-hint">GLB, GLTF, FBX, OBJ or STL, plus any number of animation files — every clip inside each file is read, measured and shown to you before it is saved</span>
+            </button>
+
             <label class="settings-action" for="upload-character">
-              <span class="settings-action-title">Add a character</span>
-              <span class="settings-action-hint">Rigged .glb plus its animation clip .glb files — select them all at once</span>
-              <input id="upload-character" type="file" accept=".glb" multiple />
+              <span class="settings-action-title">Quick add a character</span>
+              <span class="settings-action-hint">Model file plus one clip file per role, matched by filename — no review step</span>
+              <input id="upload-character" type="file" accept=".glb,.gltf,.fbx,.obj,.stl" multiple />
             </label>
           </div>
 
@@ -52,6 +57,19 @@
 
           <ul id="settings-imports" class="settings-list"></ul>
         </div>
+      </section>
+
+      <section id="import-wizard" class="is-hidden" aria-label="Add a character">
+        <header class="settings-head">
+          <h2>Add a character</h2>
+          <button id="import-wizard-close" type="button" aria-label="Close">✕</button>
+        </header>
+        <div class="settings-body">
+          <div id="import-wizard-body"></div>
+          <p id="import-wizard-status" data-state="idle"></p>
+        </div>
+        <input id="import-model" class="wizard-file" type="file" />
+        <input id="import-clips" class="wizard-file" type="file" multiple />
       </section>
 
       <section id="overlay" aria-live="polite">

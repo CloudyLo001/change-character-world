@@ -106,6 +106,144 @@
         }
       }
     },
+    "character-plumber": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "animation",
+        "assetType": "model_animation_batch",
+        "assetId": "w5798p69yw51sh5skqzwja85zh8ca8mq"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "local_files",
+      "artifacts": {
+        "clip:w973qejr8g0n9sd8xqs6ddrfh98cakda:animation_glb": {
+          "artifactId": "clip:w973qejr8g0n9sd8xqs6ddrfh98cakda:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "standard-forward-charge-inplace-h98cakda.glb",
+          "localPath": "public/assets/mint/character-plumber/clip-w973qejr8g0n9sd8xqs6ddrfh98cakda-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 27268,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97dv09j2gexq96zz5drtatjcx8caac1:animation_glb": {
+          "artifactId": "clip:w97dv09j2gexq96zz5drtatjcx8caac1:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "idle-cx8caac1.glb",
+          "localPath": "public/assets/mint/character-plumber/clip-w97dv09j2gexq96zz5drtatjcx8caac1-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 68308,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97ey619aj1xj0p6re9wyxshw98cb746:animation_glb": {
+          "artifactId": "clip:w97ey619aj1xj0p6re9wyxshw98cb746:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "proud-strut-inplace-w98cb746.glb",
+          "localPath": "public/assets/mint/character-plumber/clip-w97ey619aj1xj0p6re9wyxshw98cb746-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 70044,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "clip:w97fseccktqd6xb46957008w7d8cbgk7:animation_glb": {
+          "artifactId": "clip:w97fseccktqd6xb46957008w7d8cbgk7:animation_glb",
+          "role": "animation_clip",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "regular-jump-7d8cbgk7.glb",
+          "localPath": "public/assets/mint/character-plumber/clip-w97fseccktqd6xb46957008w7d8cbgk7-animation_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 43084,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        },
+        "rigged_character_glb": {
+          "artifactId": "rigged_character_glb",
+          "role": "rigged_character",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "red-cap-plumber-zh8ca8mq-rigged.glb",
+          "localPath": "public/assets/mint/character-plumber/rigged_character_glb.glb",
+          "loaderHint": "gltf",
+          "byteSize": 3558932,
+          "extensionsUsed": [
+            "KHR_materials_ior",
+            "KHR_materials_specular"
+          ],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false,
+          "usesMeshopt": false,
+          "requiresMeshopt": false,
+          "usesKtx2": false,
+          "requiresKtx2": false,
+          "unknownRequiredExtensions": []
+        }
+      }
+    },
     "character-superhero": {
       "source": {
         "manifestVersion": 1,

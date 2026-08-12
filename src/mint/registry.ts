@@ -45,6 +45,22 @@ export type ClipRole = keyof CharacterClips;
 
 export type ClipFileRefs = Partial<Record<ClipRole, LibraryFileRef>>;
 
+/**
+ * One clip inside an uploaded file, already reviewed and measured. Several refs
+ * routinely share a `fileId` — a Mint animation batch or a Mixamo pack exports
+ * as a single file holding every take.
+ */
+export interface CharacterClipRef extends LibraryFileRef {
+  role: ClipRole;
+  /** Index into that file's `animations[]`. */
+  clipIndex: number;
+  clipName?: string;
+  /** Authored ground speed in m/s at the normalized character height. */
+  measuredSpeed?: number;
+  bindRate?: number;
+  duration?: number;
+}
+
 export interface CharacterEntry {
   key: string;
   label: string;
@@ -52,9 +68,15 @@ export interface CharacterEntry {
   /** Project-served GLB URL. Absent for uploaded characters. */
   modelUrl?: string;
   clips: CharacterClips;
-  /** Uploaded rigged GLB held in the library. */
+  /** Uploaded rigged model held in the library. */
   modelFile?: LibraryFileRef;
+  /** Legacy one-file-per-role refs. Superseded by `clipRefs` when present. */
   clipFiles?: ClipFileRefs;
+  /** Per-clip refs from the guided importer; preferred over `clipFiles`. */
+  clipRefs?: CharacterClipRef[];
+  modelFormat?: string;
+  /** False for a mesh with no skeleton, which nothing can animate. */
+  playable?: boolean;
   transform: AssetTransform;
   thumbnailUrl?: string;
 }
@@ -153,6 +175,33 @@ const ROLE_PATTERNS: Array<{ role: ClipRole; patterns: RegExp[] }> = [
   { role: 'walk', patterns: [/walking[-_]2/i, /strut|stylish/i, /walk/i] },
   { role: 'idle', patterns: [/idle/i] },
 ];
+
+/** Confidence given to a role's preferred pattern, and to its alternates. */
+const PRIMARY_NAME_SCORE = 1;
+const ALTERNATE_NAME_SCORE = 0.8;
+
+/**
+ * How strongly a name reads as each locomotion role. The clip classifier scores
+ * a clip's internal name and its filename separately and weighs them against
+ * measured motion, so it needs the graded signal rather than a single winner.
+ *
+ * Backed by the same pattern table `assignClipRolesByName` uses, so the two can
+ * never drift apart.
+ */
+export function scoreNameForRoles(name: string): Partial<Record<ClipRole, number>> {
+  // Turn clips also contain "idle" (Idle_Turn_Left); never map them.
+  if (/turn/i.test(name)) return {};
+  const scores: Partial<Record<ClipRole, number>> = {};
+  for (const { role, patterns } of ROLE_PATTERNS) {
+    for (let i = 0; i < patterns.length; i += 1) {
+      if (patterns[i].test(name)) {
+        scores[role] = i === 0 ? PRIMARY_NAME_SCORE : ALTERNATE_NAME_SCORE;
+        break;
+      }
+    }
+  }
+  return scores;
+}
 
 /**
  * Maps clip names onto locomotion roles. Shared by the project registry and the
@@ -257,9 +306,25 @@ export function mergeLibraryAssets(base: Catalog, assets: StoredAsset[]): Catalo
       continue;
     }
     if (asset.kind === 'character' && asset.character) {
+      const clipRefs: CharacterClipRef[] = [];
       const clipFiles: ClipFileRefs = {};
       for (const clip of asset.character.clips) {
-        clipFiles[clip.role] = { fileId: clip.fileId, fileName: clip.fileName };
+        if (clip.role === 'unused') continue;
+        clipRefs.push({
+          fileId: clip.fileId,
+          fileName: clip.fileName,
+          role: clip.role,
+          clipIndex: clip.clipIndex,
+          clipName: clip.clipName,
+          measuredSpeed: clip.measuredSpeed ?? undefined,
+          bindRate: clip.bindRate ?? undefined,
+          duration: clip.duration ?? undefined,
+        });
+        // Kept in step so anything still reading the one-file-per-role shape
+        // sees what it always saw.
+        if (clip.clipIndex === 0 && !clipFiles[clip.role]) {
+          clipFiles[clip.role] = { fileId: clip.fileId, fileName: clip.fileName };
+        }
       }
       characters.push({
         key: asset.key,
@@ -271,6 +336,11 @@ export function mergeLibraryAssets(base: Catalog, assets: StoredAsset[]): Catalo
           fileName: asset.character.modelFileName,
         },
         clipFiles,
+        clipRefs,
+        modelFormat: asset.character.modelFormat,
+        // null means "not determined yet"; only an explicit false is a promise
+        // that this mesh cannot be animated.
+        playable: asset.character.hasSkeleton !== false,
         transform: asset.transform ?? { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
       });
     }

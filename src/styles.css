@@ -354,3 +354,181 @@ body {
 .settings-import-row button:hover {
   border-color: rgba(150, 170, 255, 0.6);
 }
+
+/* ---- Guided character import ---------------------------------------- */
+
+#character-import-open {
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+#import-wizard {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: min(430px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 17, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  z-index: 2;
+}
+
+#import-wizard.is-hidden {
+  display: none;
+}
+
+.wizard-file {
+  display: none;
+}
+
+.wizard-step {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a90a8;
+}
+
+#import-wizard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wizard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #889;
+}
+
+.wizard-field input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #e8e8f0;
+  font-size: 12.5px;
+  padding: 6px 9px;
+}
+
+.wizard-fact,
+.wizard-notice {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #aab;
+}
+
+.wizard-notice {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.wizard-button {
+  background: #23233a;
+  color: #e8e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wizard-button:hover {
+  border-color: rgba(150, 170, 255, 0.6);
+}
+
+.wizard-button.is-primary {
+  background: #3a45a0;
+  border-color: rgba(150, 170, 255, 0.5);
+}
+
+.clip-preview {
+  position: relative;
+  height: 190px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(60, 66, 92, 0.55), rgba(18, 18, 28, 0.75));
+}
+
+.clip-preview-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.clip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.clip-row.is-selected {
+  border-color: rgba(150, 170, 255, 0.55);
+}
+
+.clip-row.is-warning {
+  background: rgba(120, 60, 60, 0.22);
+}
+
+.clip-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.clip-row-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip-row-facts {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: #889;
+}
+
+.clip-row.is-warning .clip-row-facts {
+  color: #ffb4b4;
+}
+
+.clip-role-select {
+  flex: none;
+  background: #1b1b2a;
+  color: #e8e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 3px 5px;
+}

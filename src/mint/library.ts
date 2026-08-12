@@ -1,10 +1,13 @@
+import type { ModelFormat } from '../assets/model-loading';
 import type { AssetTransform, ClipRole } from './registry';
 
 const DB_NAME = 'mint-playground-library';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const FILE_STORE = 'files';
 const ASSET_STORE = 'assets';
 const IMPORT_STORE = 'imports';
+/** Current shape of `StoredAsset.character`. See `migrateCharactersToV2`. */
+const CHARACTER_SCHEMA = 2;
 
 /** Splat container formats Mint can export a world as. */
 export const SPLAT_EXTENSIONS = ['rad', 'spz', 'ply', 'splat', 'ksplat'] as const;
@@ -16,10 +19,43 @@ export interface StoredFile {
   blob: Blob;
 }
 
+/** A locomotion role, or the explicit decision not to use a clip. */
+export type ClipRoleAssignment = ClipRole | 'unused';
+
+/**
+ * One animation clip, identified by its position *inside* a file rather than by
+ * the file itself — a single Mint or Mixamo export routinely carries several
+ * takes, and each needs its own role and its own measurements.
+ *
+ * The nullable analysis fields are the backwards-compatibility contract: null
+ * means "never analysed", which sends `Character` back to measuring the clip at
+ * load time exactly as it did before this schema existed.
+ */
 export interface StoredClip {
-  role: ClipRole;
+  id: string;
   fileId: string;
   fileName: string;
+  /** Index into that file's `animations[]`. */
+  clipIndex: number;
+  clipName: string;
+  role: ClipRoleAssignment;
+  duration: number | null;
+  /** Authored ground speed in m/s, measured at the normalized character height. */
+  measuredSpeed: number | null;
+  /** Fraction of tracks that bound to this character's skeleton, 0..1. */
+  bindRate: number | null;
+  unitScale: number | null;
+  rootMotion: boolean | null;
+}
+
+export interface StoredCharacter {
+  modelFileId: string;
+  modelFileName: string;
+  modelFormat: ModelFormat;
+  /** null when never determined — resolved the next time the model loads. */
+  hasSkeleton: boolean | null;
+  clips: StoredClip[];
+  schema: number;
 }
 
 export interface StoredAsset {
@@ -35,11 +71,14 @@ export interface StoredAsset {
     colliderFileId?: string;
     colliderFileName?: string;
   };
-  character?: {
-    modelFileId: string;
-    modelFileName: string;
-    clips: StoredClip[];
-  };
+  character?: StoredCharacter;
+}
+
+/** The pre-v2 clip record, kept only so the migration can read it. */
+interface LegacyStoredClip {
+  role: ClipRole;
+  fileId: string;
+  fileName: string;
 }
 
 export interface PendingImport {
@@ -67,20 +106,106 @@ function done(tx: IDBTransaction): Promise<void> {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+/**
+ * Rewrites v1 characters — one clip per file, no measurements — into the
+ * per-clip v2 shape.
+ *
+ * Everything in here is deliberately callback-only. Awaiting anything inside an
+ * `onupgradeneeded` handler lets the versionchange transaction auto-commit
+ * underneath you, and the migration silently half-applies.
+ */
+function migrateCharactersToV2(transaction: IDBTransaction): void {
+  const store = transaction.objectStore(ASSET_STORE);
+  store.openCursor().onsuccess = (event) => {
+    const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+    if (!cursor) return;
+    const asset = cursor.value as StoredAsset;
+    const character = asset.character as (StoredCharacter & { clips: unknown[] }) | undefined;
+    if (asset.kind === 'character' && character && character.schema !== CHARACTER_SCHEMA) {
+      const legacy = character.clips as unknown as LegacyStoredClip[];
+      character.clips = legacy.map((clip, index) => ({
+        id: `${asset.key}-clip-${index}`,
+        fileId: clip.fileId,
+        fileName: clip.fileName,
+        // v1 only ever played the first clip in a file.
+        clipIndex: 0,
+        clipName: stripExtension(clip.fileName),
+        role: clip.role,
+        duration: null,
+        measuredSpeed: null,
+        bindRate: null,
+        unitScale: null,
+        rootMotion: null,
+      }));
+      character.modelFormat = (fileExtension(character.modelFileName) || 'glb') as ModelFormat;
+      character.hasSkeleton = null;
+      character.schema = CHARACTER_SCHEMA;
+      cursor.update(asset);
+    }
+    cursor.continue();
+  };
+}
+
 function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const open = indexedDB.open(DB_NAME, DB_VERSION);
-    open.onupgradeneeded = () => {
+    open.onupgradeneeded = (event) => {
       const db = open.result;
+      const transaction = open.transaction;
       if (!db.objectStoreNames.contains(FILE_STORE)) db.createObjectStore(FILE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(ASSET_STORE)) db.createObjectStore(ASSET_STORE, { keyPath: 'key' });
       if (!db.objectStoreNames.contains(IMPORT_STORE)) db.createObjectStore(IMPORT_STORE, { keyPath: 'id' });
+      if (event.oldVersion >= 1 && event.oldVersion < 2 && transaction) {
+        migrateCharactersToV2(transaction);
+      }
     };
+    open.onblocked = () =>
+      reject(
+        new Error(
+          'The asset library needs to upgrade — close the playground in your other tabs and reload.',
+        ),
+      );
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error ?? new Error('Could not open the asset library'));
   });
   return dbPromise;
+}
+
+/**
+ * Coerces a character record into the current shape in memory. The upgrade
+ * handler normally does this on disk, but a blocked or interrupted upgrade can
+ * leave a record behind, and a half-migrated record must not crash the catalog.
+ */
+function normalizeStoredAsset(asset: StoredAsset): StoredAsset {
+  const character = asset.character;
+  if (!character || character.schema === CHARACTER_SCHEMA) return asset;
+  const legacy = (character.clips ?? []) as unknown as LegacyStoredClip[];
+  return {
+    ...asset,
+    character: {
+      modelFileId: character.modelFileId,
+      modelFileName: character.modelFileName,
+      modelFormat: (character.modelFormat ??
+        fileExtension(character.modelFileName) ??
+        'glb') as ModelFormat,
+      hasSkeleton: character.hasSkeleton ?? null,
+      schema: CHARACTER_SCHEMA,
+      clips: legacy.map((clip, index) => ({
+        id: `${asset.key}-clip-${index}`,
+        fileId: clip.fileId,
+        fileName: clip.fileName,
+        clipIndex: 0,
+        clipName: stripExtension(clip.fileName),
+        role: clip.role,
+        duration: null,
+        measuredSpeed: null,
+        bindRate: null,
+        unitScale: null,
+        rootMotion: null,
+      })),
+    },
+  };
 }
 
 function makeId(prefix: string): string {
@@ -107,6 +232,10 @@ export function fileExtension(name: string): string {
   return match ? match[1].toLowerCase() : '';
 }
 
+export function stripExtension(name: string): string {
+  return name.replace(/\.[a-z0-9]+$/i, '');
+}
+
 export function isSplatFile(name: string): boolean {
   return (SPLAT_EXTENSIONS as readonly string[]).includes(fileExtension(name));
 }
@@ -121,7 +250,7 @@ export class AssetLibrary {
     const db = await openDb();
     const tx = db.transaction(ASSET_STORE, 'readonly');
     const assets = await request(tx.objectStore(ASSET_STORE).getAll() as IDBRequest<StoredAsset[]>);
-    return assets.sort((a, b) => a.createdAt - b.createdAt);
+    return assets.map(normalizeStoredAsset).sort((a, b) => a.createdAt - b.createdAt);
   }
 
   async readFileBytes(fileId: string): Promise<ArrayBuffer> {
@@ -156,26 +285,83 @@ export class AssetLibrary {
     return asset;
   }
 
+  /**
+   * The quick path: one file per role, roles already guessed from filenames.
+   * Nothing here is analysed, so every measurement is stored as null and gets
+   * worked out at load time.
+   */
   async addCharacter(label: string, model: File, clips: StoredClipUpload[]): Promise<StoredAsset> {
-    const taken = new Set((await this.listAssets()).map((asset) => asset.key));
-    const modelFile = await this.putFile(model);
-    const storedClips: StoredClip[] = [];
-    let bytes = model.size;
-    for (const clip of clips) {
-      const stored = await this.putFile(clip.file);
-      storedClips.push({ role: clip.role, fileId: stored.id, fileName: stored.name });
-      bytes += clip.file.size;
-    }
-    const asset: StoredAsset = {
-      key: makeAssetKey('character', label, taken),
-      kind: 'character',
+    return this.addCharacterFromImport({
       label,
+      model,
+      modelFormat: (fileExtension(model.name) || 'glb') as ModelFormat,
+      hasSkeleton: null,
+      clips: clips.map((clip) => ({
+        sourceFile: clip.file,
+        clipIndex: 0,
+        clipName: stripExtension(clip.file.name),
+        role: clip.role,
+        duration: null,
+        measuredSpeed: null,
+        bindRate: null,
+        unitScale: null,
+        rootMotion: null,
+      })),
+    });
+  }
+
+  /**
+   * The guided path: any number of clips, any number of them sharing a file,
+   * each already measured against this character's skeleton.
+   *
+   * Files are stored once no matter how many clips point at them — a six-take
+   * FBX is one blob, and counting it once is also what keeps the usage figure
+   * honest.
+   */
+  async addCharacterFromImport(draft: CharacterImportDraft): Promise<StoredAsset> {
+    const taken = new Set((await this.listAssets()).map((asset) => asset.key));
+    const stored = new Map<File, StoredFile>();
+    const modelFile = await this.putFile(draft.model);
+    stored.set(draft.model, modelFile);
+
+    const storedClips: StoredClip[] = [];
+    for (const [index, clip] of draft.clips.entries()) {
+      let file = stored.get(clip.sourceFile);
+      if (!file) {
+        file = await this.putFile(clip.sourceFile);
+        stored.set(clip.sourceFile, file);
+      }
+      storedClips.push({
+        id: makeId('clip'),
+        fileId: file.id,
+        fileName: file.name,
+        clipIndex: clip.clipIndex,
+        clipName: clip.clipName || `Clip ${index + 1}`,
+        role: clip.role,
+        duration: clip.duration,
+        measuredSpeed: clip.measuredSpeed,
+        bindRate: clip.bindRate,
+        unitScale: clip.unitScale,
+        rootMotion: clip.rootMotion,
+      });
+    }
+
+    let bytes = 0;
+    for (const file of stored.values()) bytes += file.size;
+
+    const asset: StoredAsset = {
+      key: makeAssetKey('character', draft.label, taken),
+      kind: 'character',
+      label: draft.label,
       createdAt: Date.now(),
       bytes,
       character: {
         modelFileId: modelFile.id,
         modelFileName: modelFile.name,
+        modelFormat: draft.modelFormat,
+        hasSkeleton: draft.hasSkeleton,
         clips: storedClips,
+        schema: CHARACTER_SCHEMA,
       },
     };
     await this.putAsset(asset);
@@ -202,12 +388,15 @@ export class AssetLibrary {
     );
     if (!asset) return;
 
-    const fileIds = [
-      asset.world?.fileId,
-      asset.world?.colliderFileId,
-      asset.character?.modelFileId,
-      ...(asset.character?.clips.map((clip) => clip.fileId) ?? []),
-    ].filter((id): id is string => Boolean(id));
+    // Deduped: several clips routinely share one multi-take file.
+    const fileIds = new Set(
+      [
+        asset.world?.fileId,
+        asset.world?.colliderFileId,
+        asset.character?.modelFileId,
+        ...(asset.character?.clips.map((clip) => clip.fileId) ?? []),
+      ].filter((id): id is string => Boolean(id)),
+    );
 
     const tx = db.transaction([ASSET_STORE, FILE_STORE], 'readwrite');
     tx.objectStore(ASSET_STORE).delete(key);
@@ -286,6 +475,27 @@ export class AssetLibrary {
 export interface StoredClipUpload {
   role: ClipRole;
   file: File;
+}
+
+/** One reviewed clip on its way into the library. */
+export interface CharacterImportClip {
+  sourceFile: File;
+  clipIndex: number;
+  clipName: string;
+  role: ClipRoleAssignment;
+  duration: number | null;
+  measuredSpeed: number | null;
+  bindRate: number | null;
+  unitScale: number | null;
+  rootMotion: boolean | null;
+}
+
+export interface CharacterImportDraft {
+  label: string;
+  model: File;
+  modelFormat: ModelFormat;
+  hasSkeleton: boolean | null;
+  clips: CharacterImportClip[];
 }
 
 export function formatBytes(bytes: number): string {

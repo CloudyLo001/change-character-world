@@ -8,6 +8,7 @@ import {
   type StoredAsset,
   type StoredClipUpload,
 } from '../mint/library';
+import { isModelFile } from '../assets/model-loading';
 import { assignClipRolesByName, type ClipRole } from '../mint/registry';
 
 type Status = 'idle' | 'busy' | 'error' | 'done';
@@ -130,9 +131,13 @@ export class SettingsPanel {
   }
 
   private async addCharacter(files: File[]): Promise<void> {
-    const glbs = files.filter((file) => fileExtension(file.name) === 'glb');
+    const glbs = files.filter((file) => isModelFile(file.name));
     if (glbs.length === 0) {
-      this.setStatus('Pick the rigged character GLB, and its clip GLBs if you have them.', 'error');
+      this.setStatus(
+        'Pick the rigged character model, and its clip files if you have them. ' +
+          'GLB, GLTF, FBX, OBJ and STL are accepted.',
+        'error',
+      );
       return;
     }
 
@@ -353,7 +358,12 @@ function importRequestText(record: PendingImport): string {
 
 /** Reports how an uploaded character is actually animated, without guessing. */
 function characterDetail(asset: StoredAsset): string {
-  const roles = asset.character?.clips.map((clip) => clip.role) ?? [];
+  if (asset.character?.hasSkeleton === false) {
+    return 'character · no skeleton — rig it in Mint and re-import';
+  }
+  const roles = (asset.character?.clips ?? [])
+    .map((clip) => clip.role)
+    .filter((role): role is ClipRole => role !== 'unused');
   if (roles.length === 0) return 'character · borrowing built-in animation';
   const missing = (['walk', 'run', 'jump'] as ClipRole[]).filter((role) => !roles.includes(role));
   return missing.length === 0

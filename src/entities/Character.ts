@@ -1,11 +1,46 @@
 import * as THREE from 'three';
-import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { createMintGltfLoader } from '../assets/gltf-runtime';
+import { loadModelBytes, loadModelUrl, type LoadedModel } from '../assets/model-loading';
+import {
+  collectBoneNames,
+  collectBones,
+  fitClipToSkeleton,
+  prepareUploadedClip,
+  MIN_CLIP_BINDING,
+  type RetargetTarget,
+} from '../animation/clip-fit';
+import {
+  ANKLE_BONE_PATTERN,
+  FOREARM_PATTERN,
+  HIPS_BONE_PATTERN,
+  LEFT_PATTERN,
+  RIGHT_PATTERN,
+  TOE_BONE_PATTERN,
+  UPPER_ARM_PATTERN,
+} from '../animation/rig-names';
 import { disposeObject3D } from '../utils/dispose';
 import type { AssetLibrary } from '../mint/library';
-import type { CharacterEntry, ClipRole, LibraryFileRef } from '../mint/registry';
+import type {
+  CharacterClipRef,
+  CharacterEntry,
+  ClipRole,
+  LibraryFileRef,
+} from '../mint/registry';
 
 export type { ClipRole };
+
+/** Where the clip playing a role came from. */
+export type ClipSource = 'own' | 'borrowed' | 'legacy';
+
+export interface ClipDescription {
+  role: ClipRole;
+  clipName: string;
+  duration: number;
+  bindRate: number;
+  unitScale: number;
+  rootMotion: boolean;
+  source: ClipSource;
+}
 
 const TARGET_HEIGHT = 1.75;
 const FADE_SECONDS = 0.18;
@@ -29,17 +64,6 @@ const WEIGHT_LAMBDA = 12;
 const TOE_BONE_CLEARANCE = 0.03;
 const ANKLE_BONE_CLEARANCE = 0.09;
 const MAX_FOOT_CORRECTION = 0.25;
-const TOE_BONE_PATTERN = /toe|ball/i;
-const ANKLE_BONE_PATTERN = /foot|ankle/i;
-// Mint rigs characters from a T-pose, so retargeted arms sit wider than the
-// source clip intends — worse the bulkier the shoulders. These find the upper
-// arm bone and the elbow below it so the spread can be measured and corrected.
-// Rigs are commonly CamelCase (LeftArm/LeftForeArm) or delimited
-// (upper_arm.L), so these must match inside a word as well as at boundaries.
-const UPPER_ARM_PATTERN = /(upper.?arm|shoulder|arm)/i;
-const FOREARM_PATTERN = /(fore.?arm|lower.?arm|elbow)/i;
-const LEFT_PATTERN = /(left|(^|[^a-z])l($|[^a-z]))/i;
-const RIGHT_PATTERN = /(right|(^|[^a-z])r($|[^a-z]))/i;
 /**
  * How much of the arm's sideways spread to remove. Scaling rather than clamping
  * keeps the arm's lateral movement alive instead of freezing it at a limit.
@@ -56,8 +80,6 @@ const FRONTAL_FADE_IN = 0.18;
 const FRONTAL_FADE_OUT = 0.42;
 const DOWNWARD_FADE = 0.25;
 const CHARACTER_ENV_MAP_INTENSITY = 1;
-/** Fraction of a borrowed clip's tracks that must bind for it to be usable. */
-const MIN_CLIP_BINDING = 0.6;
 
 /**
  * A rigged Mint character driven by a small locomotion blend tree: idle, walk,
@@ -79,12 +101,16 @@ export class Character {
   private locomotionSynced = false;
   private readonly borrowed: ClipRole[];
   private readonly rigged: boolean;
+  /** Speeds already derived at import or from a clip's own root motion. */
+  private readonly authoredSpeeds: Partial<Record<ClipRole, number>>;
+  private readonly clipInfo: Partial<Record<ClipRole, ClipDescription>>;
   private reducedMotion = false;
   /** How far the posed feet had to be corrected off the bind-pose estimate. */
   readonly footCorrection: number;
 
   private readonly arms: ArmChain[] = [];
   private readonly feet: FootBone[] = [];
+  private hips: THREE.Object3D | null = null;
   private readonly naturalSpeeds: Record<'walk' | 'run', number> = {
     walk: WALK_FALLBACK_SPEED,
     run: RUN_FALLBACK_SPEED,
@@ -111,10 +137,17 @@ export class Character {
     readonly entry: CharacterEntry,
     model: THREE.Group,
     clips: Partial<Record<ClipRole, THREE.AnimationClip>>,
-    rig: { borrowed: ClipRole[]; hasSkeleton: boolean },
+    rig: {
+      borrowed: ClipRole[];
+      hasSkeleton: boolean;
+      authoredSpeeds?: Partial<Record<ClipRole, number>>;
+      clipInfo?: Partial<Record<ClipRole, ClipDescription>>;
+    },
   ) {
     this.borrowed = rig.borrowed;
     this.rigged = rig.hasSkeleton;
+    this.authoredSpeeds = rig.authoredSpeeds ?? {};
+    this.clipInfo = rig.clipInfo ?? {};
     // Normalize every character to the same gameplay height and put the feet
     // at the root origin so swaps never change how the controller behaves.
     const bounds = new THREE.Box3().setFromObject(model);
@@ -157,6 +190,7 @@ export class Character {
   private collectFootBones(model: THREE.Group): void {
     model.traverse((object) => {
       if (!(object as THREE.Bone).isBone) return;
+      if (!this.hips && HIPS_BONE_PATTERN.test(object.name)) this.hips = object;
       if (!TOE_BONE_PATTERN.test(object.name) && !ANKLE_BONE_PATTERN.test(object.name)) return;
       const isLeft = LEFT_PATTERN.test(object.name);
       const isRight = RIGHT_PATTERN.test(object.name);
@@ -182,10 +216,23 @@ export class Character {
    * feet stop sliding.
    */
   private measureNaturalSpeeds(): void {
-    if (this.feet.length < 2) return;
     for (const role of ['walk', 'run'] as const) {
       const action = this.actions.get(role);
       if (!action) continue;
+      // A speed carried in from the import — or read off the clip's own root
+      // motion — is a direct measurement of how far the clip travels, so it
+      // beats inferring it from foot travel.
+      const authored = this.authoredSpeeds[role];
+      if (
+        authored !== undefined &&
+        Number.isFinite(authored) &&
+        authored >= MIN_PLAUSIBLE_CLIP_SPEED &&
+        authored <= MAX_PLAUSIBLE_CLIP_SPEED
+      ) {
+        this.naturalSpeeds[role] = authored;
+        continue;
+      }
+      if (this.feet.length < 2) continue;
       const measured = this.measureClipSpeed(action);
       if (measured !== null) this.naturalSpeeds[role] = measured;
     }
@@ -318,52 +365,147 @@ export class Character {
   }
 
   static async load(entry: CharacterEntry, library?: AssetLibrary): Promise<Character> {
-    const loader = createMintGltfLoader();
-    const read = async (url?: string, ref?: LibraryFileRef): Promise<GLTF> => {
-      if (url) return loader.loadAsync(url);
-      if (ref && library) return loader.parseAsync(await library.readFileBytes(ref.fileId), '');
+    const readBytes = async (ref: LibraryFileRef): Promise<LoadedModel> => {
+      if (!library) throw new Error(`Character "${entry.key}" needs the asset library to load.`);
+      return loadModelBytes(await library.readFileBytes(ref.fileId), ref.fileName);
+    };
+    const read = async (url?: string, ref?: LibraryFileRef): Promise<LoadedModel> => {
+      if (url) return loadModelUrl(url);
+      if (ref) return readBytes(ref);
       throw new Error(`Character "${entry.key}" has no loadable model source.`);
     };
 
-    const modelGltf = await read(entry.modelUrl, entry.modelFile);
+    const model = await read(entry.modelUrl, entry.modelFile);
     const clips: Partial<Record<ClipRole, THREE.AnimationClip>> = {};
+    const clipInfo: Partial<Record<ClipRole, ClipDescription>> = {};
+    const authoredSpeeds: Partial<Record<ClipRole, number>> = {};
+
+    // Measured here rather than in the constructor because a clip's travel is
+    // in the source file's units, and this is the factor that turns it into
+    // gameplay metres. The constructor recomputes the same number when it
+    // normalizes the model.
+    const rawHeight = Math.max(
+      new THREE.Box3().setFromObject(model.scene).getSize(new THREE.Vector3()).y,
+      0.01,
+    );
+    const target: RetargetTarget = {
+      boneNames: collectBoneNames(model.scene),
+      bones: collectBones(model.scene),
+      normalizationScale: TARGET_HEIGHT / rawHeight,
+    };
+
+    const accept = (
+      role: ClipRole,
+      raw: THREE.AnimationClip,
+      source: ClipSource,
+      cached?: { measuredSpeed?: number; clipName?: string },
+    ): void => {
+      const prepared = prepareUploadedClip(raw, target);
+      if (target.boneNames.size > 0 && prepared.bindRate < MIN_CLIP_BINDING) {
+        // Leaving the role empty is what lets the borrow fallback below step
+        // in. Filling it with a clip that binds to nothing would freeze the
+        // body *and* suppress the fallback that would have saved it.
+        console.warn(
+          `Character "${entry.key}": ${role} clip "${raw.name}" only binds ` +
+            `${Math.round(prepared.bindRate * 100)}% of its tracks to this skeleton — ignoring it.`,
+        );
+        return;
+      }
+      clips[role] = prepared.clip;
+      clipInfo[role] = {
+        role,
+        clipName: cached?.clipName || raw.name || role,
+        duration: prepared.clip.duration,
+        bindRate: prepared.bindRate,
+        unitScale: prepared.unitScale,
+        rootMotion: prepared.hadRootMotion,
+        source,
+      };
+      const speed = cached?.measuredSpeed ?? prepared.authoredSpeed ?? undefined;
+      if (speed !== undefined) authoredSpeeds[role] = speed;
+    };
 
     const roles: ClipRole[] = ['idle', 'walk', 'run', 'jump'];
-    for (const role of roles) {
-      const url = entry.clips[role];
-      const ref = entry.clipFiles?.[role];
-      if (!url && !ref) continue;
-      if (url && url === entry.modelUrl) continue;
-      const clipGltf = await read(url, ref);
-      const clip = clipGltf.animations[0];
-      if (clip) clips[role] = clip;
+    if (entry.clipRefs && entry.clipRefs.length > 0) {
+      // Group by file so a multi-take export is parsed once and read N times.
+      const byFile = new Map<string, CharacterClipRef[]>();
+      for (const ref of entry.clipRefs) {
+        const group = byFile.get(ref.fileId);
+        if (group) group.push(ref);
+        else byFile.set(ref.fileId, [ref]);
+      }
+      for (const [fileId, refs] of byFile) {
+        const source =
+          fileId === entry.modelFile?.fileId ? model : await readBytes(refs[0]);
+        for (const ref of refs) {
+          const raw = source.animations[ref.clipIndex];
+          if (!raw) {
+            console.warn(
+              `Character "${entry.key}": ${refs[0].fileName} has no clip at index ${ref.clipIndex}.`,
+            );
+            continue;
+          }
+          accept(ref.role, raw, 'own', ref);
+        }
+      }
+    } else {
+      for (const role of roles) {
+        const url = entry.clips[role];
+        const ref = entry.clipFiles?.[role];
+        if (!url && !ref) continue;
+        if (url && url === entry.modelUrl) continue;
+        const clipModel = await read(url, ref);
+        const raw = clipModel.animations[0];
+        if (raw) accept(role, raw, 'legacy');
+      }
     }
-    // A character whose clips are baked into the model GLB still needs
+
+    // A character whose clips are baked into the model file still needs
     // something to stand in as idle.
-    if (!clips.idle && modelGltf.animations[0]) clips.idle = modelGltf.animations[0];
+    if (!clips.idle && model.animations[0]) accept('idle', model.animations[0], 'own');
 
     // Anything still missing is borrowed from the shared locomotion set. An
     // animation track binds to a node by name, so a clip authored for one rig
     // plays on any skeleton using the same bone names — which is what lets an
     // uploaded character walk without being rigged again.
-    const skeleton = collectBoneNames(modelGltf.scene);
     const borrowed: ClipRole[] = [];
-    if (skeleton.size > 0) {
+    if (target.boneNames.size > 0) {
+      const loader = createMintGltfLoader();
       for (const role of roles) {
         if (clips[role]) continue;
         const shared = await loadSharedClip(role, loader);
         if (!shared) continue;
-        const fitted = fitClipToSkeleton(shared, skeleton);
-        if (!fitted) continue;
-        clips[role] = fitted;
+        const fitted = fitClipToSkeleton(shared, target.boneNames);
+        // Below this the rig is a different skeleton, not a naming variant, and
+        // playing the clip would only move part of the body.
+        if (fitted.bindRate < MIN_CLIP_BINDING) continue;
+        clips[role] = fitted.clip;
+        clipInfo[role] = {
+          role,
+          clipName: shared.name || role,
+          duration: fitted.clip.duration,
+          bindRate: fitted.bindRate,
+          unitScale: 1,
+          rootMotion: false,
+          source: 'borrowed',
+        };
         borrowed.push(role);
       }
     }
 
-    return new Character(entry, modelGltf.scene, clips, {
+    return new Character(entry, model.scene, clips, {
       borrowed,
-      hasSkeleton: skeleton.size > 0,
+      hasSkeleton: target.boneNames.size > 0,
+      authoredSpeeds,
+      clipInfo,
     });
+  }
+
+  /** What each role is playing and where it came from, for the UI and tests. */
+  describeClips(): ClipDescription[] {
+    return (['idle', 'walk', 'run', 'jump'] as ClipRole[])
+      .map((role) => this.clipInfo[role])
+      .filter((info): info is ClipDescription => Boolean(info));
   }
 
   /** Locomotion roles this character actually has clips for. */
@@ -414,6 +556,18 @@ export class Character {
   /** Ground speed each locomotion clip was authored for, in m/s. */
   get clipSpeeds(): { walk: number; run: number; feet: number } {
     return { ...this.naturalSpeeds, feet: this.feet.length };
+  }
+
+  /**
+   * Where the hips sit relative to the character's own origin, on the ground
+   * plane. Surviving root motion shows up here as the body drifting away from
+   * the controller that is supposed to be carrying it.
+   */
+  hipOffset(): { x: number; z: number } | null {
+    if (!this.hips) return null;
+    const local = this.hips.getWorldPosition(new THREE.Vector3());
+    this.root.worldToLocal(local);
+    return { x: local.x, z: local.z };
   }
 
   /** Bone names and the detected arm chain, for diagnosing an unknown rig. */
@@ -695,64 +849,6 @@ async function loadSharedClip(
     sharedClipCache.set(role, pending);
   }
   return pending;
-}
-
-function collectBoneNames(model: THREE.Object3D): Set<string> {
-  const names = new Set<string>();
-  model.traverse((object) => {
-    if ((object as THREE.Bone).isBone) names.add(object.name);
-  });
-  return names;
-}
-
-/**
- * Rewrites a clip's track names onto the target skeleton when the two rigs use
- * the same bones under different spellings — `mixamorig:LeftArm` vs `LeftArm`,
- * or `upper_arm.L` vs `LeftUpperArm`. Returns null when too little of the clip
- * binds, which is better than playing a clip that only moves half the body.
- */
-function fitClipToSkeleton(
-  clip: THREE.AnimationClip,
-  boneNames: Set<string>,
-): THREE.AnimationClip | null {
-  const trackNode = (track: THREE.KeyframeTrack) => track.name.split('.')[0];
-  const direct = clip.tracks.filter((track) => boneNames.has(trackNode(track))).length;
-  if (direct === clip.tracks.length) return clip;
-
-  const normalized = new Map<string, string>();
-  for (const name of boneNames) normalized.set(normalizeBoneName(name), name);
-
-  const fitted = clip.clone();
-  let bound = 0;
-  for (const track of fitted.tracks) {
-    const node = trackNode(track);
-    if (boneNames.has(node)) {
-      bound += 1;
-      continue;
-    }
-    const match = normalized.get(normalizeBoneName(node));
-    if (match) {
-      track.name = `${match}${track.name.slice(node.length)}`;
-      bound += 1;
-    }
-  }
-
-  // Below this the rig is simply a different skeleton, not a naming variant.
-  if (bound / fitted.tracks.length < MIN_CLIP_BINDING) return null;
-  return fitted;
-}
-
-/** Collapses common rig naming conventions to a comparable form. */
-function normalizeBoneName(name: string): string {
-  let value = name.toLowerCase();
-  value = value.replace(/^mixamorig[:_]?/, '');
-  // Trailing side markers (`arm.l`, `arm_r`) become a leading word instead, so
-  // they line up with `leftarm` / `rightarm`.
-  const side = /[._-]([lr])$/.exec(value);
-  if (side) {
-    value = `${side[1] === 'l' ? 'left' : 'right'}${value.slice(0, side.index)}`;
-  }
-  return value.replace(/[^a-z0-9]/g, '');
 }
 
 /** Smooth 0..1 ramp, so corrections fade in rather than switching on. */

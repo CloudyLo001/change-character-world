@@ -12,6 +12,7 @@ import { EnvironmentLight } from '../systems/EnvironmentLight';
 import { ThirdPersonCamera } from '../systems/ThirdPersonCamera';
 import { Overlay } from '../ui/Overlay';
 import { SettingsPanel } from '../ui/SettingsPanel';
+import { CharacterImportWizard } from '../ui/CharacterImportWizard';
 import { MintWorldManager } from '../world/MintWorld';
 import { SplatGround } from '../world/SplatGround';
 
@@ -61,6 +62,7 @@ export class Game {
   private readonly contactShadow = new ContactShadow();
   private readonly library = new AssetLibrary();
   private readonly settings = new SettingsPanel(this.library);
+  private readonly importWizard = new CharacterImportWizard(this.library);
   private readonly splatGround: SplatGround;
   private catalog: Catalog = loadCatalog();
   private readonly loop = new Loop(
@@ -114,6 +116,8 @@ export class Game {
     this.overlay.onWorldChange = (key) => void this.switchWorld(key);
     this.overlay.onCharacterChange = (key) => void this.switchCharacter(key);
     this.settings.onLibraryChanged = () => this.reloadCatalog();
+    this.importWizard.onLibraryChanged = () => this.reloadCatalog();
+    this.importWizard.onCharacterAdded = (key) => this.switchCharacter(key);
 
     resizeRenderer(this.renderer, this.camera, MAX_DPR);
     this.cameraRig.snapTo(this.controller.position);
@@ -151,6 +155,7 @@ export class Game {
     this.input.dispose();
     this.overlay.dispose();
     this.settings.dispose();
+    this.importWizard.dispose();
     this.characterToken += 1;
     if (this.character) {
       this.scene.remove(this.character.root);
@@ -509,6 +514,11 @@ export class Game {
         for (let i = 0; i < frames; i += 1) this.update(delta, this.elapsed);
       },
       describeRig: () => this.character?.describeRig() ?? null,
+      describeClips: () => this.character?.describeClips() ?? null,
+      hipOffset: () => this.character?.hipOffset() ?? null,
+      stepPreview: (frames = 1, delta = 1 / 30) => {
+        this.importWizard?.stepPreview(frames, delta);
+      },
       // Hides the splat world and suspends light baking. Headless GPUs render
       // millions of splats in software, which starves the compositor and makes
       // screenshots time out; a plain background also shows a gait far better.

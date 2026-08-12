@@ -9,6 +9,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "playwright test",
     "verify:visual": "playwright test tests/visual.spec.ts",
+    "fixtures": "node scripts/make-test-fixtures.mjs",
+    "test:import": "node scripts/make-test-fixtures.mjs && node scripts/test-character-import.mjs",
+    "test:borrow": "node scripts/test-upload-borrow.mjs",
     "inspect:canvas": "node scripts/inspect-threejs-canvas.mjs"
   },
   "dependencies": {

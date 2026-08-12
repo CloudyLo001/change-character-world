@@ -76,14 +76,17 @@ export class Overlay {
 
 function fillSelect(
   select: HTMLSelectElement,
-  entries: Array<{ key: string; label: string }>,
+  entries: Array<{ key: string; label: string; playable?: boolean }>,
   selectedKey: string | null,
 ): void {
   select.innerHTML = '';
   for (const entry of entries) {
     const option = document.createElement('option');
     option.value = entry.key;
-    option.textContent = entry.label;
+    // Marked rather than hidden: an unrigged upload is still worth seeing in
+    // the list, it just cannot move once selected.
+    option.textContent =
+      entry.playable === false ? `⚠ ${entry.label} (no skeleton)` : entry.label;
     select.append(option);
   }
   if (selectedKey && entries.some((entry) => entry.key === selectedKey)) {

@@ -45,10 +45,39 @@ are not part of the repo.
   the ground is read from the splats themselves (see below); if you happen to
   have a collider `.glb`, select it alongside the splat file and it will be
   used instead for exact collision.
-- **Character** — select the rigged `.glb` and its animation clip `.glb` files
-  together. Clips are matched to walk / run / jump by filename using the same
-  rules as the project registry, and the panel tells you which ones are
-  missing. A character with no clips simply stands still.
+- **Character (guided)** — the recommended path, and the one to use for a
+  character you rigged and animated in Mint. Accepts `.glb`, `.gltf`, `.fbx`,
+  `.obj` and `.stl`, and walks you through three steps:
+
+  1. Pick the model. It reports the format, triangle count and bone count. A
+     mesh with no skeleton (any `.obj`/`.stl`, and plenty of `.glb`s) is told so
+     plainly and can be saved as unplayable or queued for rigging in Mint —
+     nothing can animate it until it has bones.
+  2. Add its animation files, as many as you like. **Every clip inside every
+     file is read**, so a Mint animation batch or a Mixamo pack exported as one
+     file gives you all of its takes, not just the first.
+  3. Review. Each clip is retargeted onto your character's actual skeleton and
+     then measured — how fast it travels, how much the hips bob, whether the
+     feet leave the ground — and a role is proposed from all three of the clip's
+     internal name, the filename and that motion. So a file called `anim_01.glb`
+     holding a clip named `Walking` is still recognised, and so is one whose
+     name says nothing at all. Click any row to play it on your character in the
+     preview, and change any role from its dropdown. Clips that barely bind to
+     your skeleton are flagged red and left out by default.
+
+  Along the way it corrects two things that otherwise break an import silently:
+  clips authored in centimetres (Mixamo's default) are rescaled, and clips
+  carrying root motion have the forward drift removed, since the controller owns
+  position — the travel is kept as the clip's authored ground speed, which is a
+  better reading than the foot-travel estimate.
+
+- **Quick add a character** — the old path: one clip file per role, matched by
+  filename, no review. Faster when you already know your filenames are right.
+
+Any locomotion role you do not supply is borrowed from the shared clip set in
+`public/assets/clips/`, so a character uploaded with no animation at all still
+walks. A clip that does not bind to the skeleton is rejected and falls back to
+borrowing rather than freezing the character.
 
 **Importing from Mint by link.** Mint's API is not reachable from the browser,
 so pasting a mint.gg link queues a request instead. Copy it, paste it to Claude
@@ -71,8 +100,10 @@ time and derives the switcher catalog from it:
   runtime. The collider is loaded invisibly and drives ground/wall collision.
 - **Characters** are a `rigged_character` GLB under
   `public/assets/mint/<key>/`. Animation comes from the shared clip set in
-  `public/assets/clips/` unless a character ships its own; clip roles (idle /
-  walk / run / jump) are matched from filenames.
+  `public/assets/clips/` unless a character ships its own; for registry entries,
+  clip roles (idle / walk / run / jump) are matched from filenames. Uploaded
+  characters instead store a role per *clip*, with the file it lives in and its
+  index inside that file, which is what lets one file supply several roles.
 - Each entry has an editable `transform`. Worlds with an identity transform get
   the standard World Labs calibration (rotation `[π, π, 0]`, scale `2.5`,
   y `1.5`) applied to the shared splat+collider root automatically.
@@ -170,6 +201,30 @@ The shared clips are produced by `scripts/extract-clips.mjs`, which strips the
 character mesh Mint bakes into every clip file — a 4.7 MB walk clip becomes
 72 KB, and the same clips then serve every character.
 
+## Checking the import path
+
+Both end-to-end checks drive a real browser against a running dev server, so
+start `npm run dev` first.
+
+```bash
+npm run test:import
+```
+
+Generates fixtures into `artifacts/fixtures` (nothing binary is committed) and
+runs `scripts/test-character-import.mjs` over them: a four-take file, the same
+takes renamed `anim_00..03` so only motion can identify them, a walk in
+centimetres with real root motion, a clip from a rig sharing no bone names,
+`.obj`/`.stl` meshes with no skeleton, five wizard open/close cycles to prove
+the preview releases its WebGL context, and a version-1 library seeded by hand
+to prove the schema migration keeps old uploads working.
+
+```bash
+npm run test:borrow
+```
+
+The narrower regression check: upload a rigged character with no clips at all
+and confirm it ends up walking on borrowed animation.
+
 ## Deploying
 
 Pushing to `main` builds the site and publishes it to GitHub Pages via
@@ -201,6 +256,12 @@ own browser and are never part of a deploy.
 - `src/systems/ThirdPersonCamera.ts` — orbit/follow camera
 - `src/ui/Overlay.ts` — status line + world/character switcher
 - `src/ui/SettingsPanel.ts` — upload panel, asset list, Mint import queue
+- `src/ui/CharacterImportWizard.ts` — guided import: parse, measure, review
+- `src/ui/ClipPreview.ts` — the wizard's own small renderer for auditioning clips
+- `src/assets/model-loading.ts` — one loader for glb/gltf/fbx/obj/stl
+- `src/animation/clip-fit.ts` — retargeting, unit rescale, root-motion removal
+- `src/animation/ClipHarness.ts` — headless clip measurement (speed, bob, air time)
+- `src/animation/clip-classify.ts` — role assignment from name + filename + motion
 - `src/mint/library.ts` — IndexedDB store for uploaded assets
 - `src/world/SplatGround.ts` — cached ground heights for collider-less worlds
 - `src/assets/gltf-runtime.ts` — shared Draco-capable GLTF loader (required

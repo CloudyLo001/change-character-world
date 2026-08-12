@@ -77,6 +77,20 @@ interface ThreeGameTestHooks {
   step(frames?: number, delta?: number): void;
   /** Bone names and detected arm chain of the active character, or null. */
   describeRig(): { bones: string[]; arms: Array<{ side: string; bone: string; elbow: string }> } | null;
+  /** What clip is playing each locomotion role, and where it came from. */
+  describeClips(): Array<{
+    role: string;
+    clipName: string;
+    duration: number;
+    bindRate: number;
+    unitScale: number;
+    rootMotion: boolean;
+    source: string;
+  }> | null;
+  /** Hips position relative to the character root; drift means live root motion. */
+  hipOffset(): { x: number; z: number } | null;
+  /** Advance the import wizard's clip preview without rAF. */
+  stepPreview(frames?: number, delta?: number): void;
   /** Pin the follow camera to a fixed angle for repeatable capture. */
   setCameraPose(yaw: number, pitch: number, distance: number): void;
   /** Hide the splat world and suspend light baking so headless capture is fast. */
