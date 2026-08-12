@@ -95,14 +95,24 @@ gets them for free — there is nothing to hand-author per world.
   few points and measures the gap, repeating for a few seconds because
   low-detail splats read high until the world streams in. The settled value is
   saved per world and can always be overridden with `[` / `]`.
+- **Stride.** Each locomotion clip is authored for a particular ground speed,
+  and playing it at any other speed makes the feet skate. At load the app runs
+  each clip in isolation and watches how fast the planted foot travels backwards
+  under the body, which gives that speed directly — the walk cycle turns out to
+  be authored for about 0.7 m/s. Playback rate is then derived from it, and the
+  controller's walk speed is set so the stride covers the ground it travels.
+  Walk and run are also phase-aligned when they blend, so their leg swings
+  reinforce rather than cancel.
 - **Arm pose.** Mint rigs characters from a T-pose, so retargeted arms sit
   much wider than the source clip intends — measured at 21–34° out from the
   torso across all three characters, in idle as well as in motion, which reads
   as a permanent shrug. After the animation poses the skeleton each frame, the
-  upper-arm bones are rotated back in about the character's forward axis until
-  they sit within ~10° of the body. Only the sideways component is touched, so
-  the forward/back arm swing that carries the walk and run cycles is untouched.
-  Tunable with `;` / `'`.
+  upper arm and forearm are rotated back in about the character's forward axis.
+  The spread is *scaled* rather than clamped to a limit: clamping parked every
+  frame on the same angle, which flattened the arm's movement into a constant
+  and looked pinned. Only the sideways component is touched, so the forward/back
+  swing that carries the walk and run cycles is untouched. Tunable with `;` /
+  `'`.
 - **Shadow.** Splats cannot receive shadow maps, so the character gets a soft
   contact decal placed at the same corrected ground point as its feet, aligned
   to the ground normal, leaning away from the derived key light, and fading out

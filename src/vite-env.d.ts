@@ -49,6 +49,7 @@ interface ThreeGameDiagnostics {
     calibrationSamples: number[];
     calibrationNote: string;
     armTuckTarget: number;
+    clipSpeeds: { walk: number; run: number; feet: number };
     armSpread: {
       leftBefore: number;
       rightBefore: number;
@@ -76,6 +77,12 @@ interface ThreeGameTestHooks {
   step(frames?: number, delta?: number): void;
   /** Bone names and detected arm chain of the active character, or null. */
   describeRig(): { bones: string[]; arms: Array<{ side: string; bone: string; elbow: string }> } | null;
+  /** Pin the follow camera to a fixed angle for repeatable capture. */
+  setCameraPose(yaw: number, pitch: number, distance: number): void;
+  /** Hide the splat world and suspend light baking so headless capture is fast. */
+  setCaptureMode(enabled: boolean): void;
+  /** Pin the movement direction so the camera can view the character side-on. */
+  setInputYaw(yaw: number | null): void;
   /** Raw collider vs visible-splat surface heights, for grounding diagnosis. */
   probeGround(
     x: number,

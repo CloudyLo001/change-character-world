@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import type { GroundSampler } from '../world/SplatGround';
 
-const WALK_SPEED = 2.0;
+// Real human walking pace. The walk clip is authored for ~0.7 m/s, so this
+// plays it at roughly 2x — a natural brisk walk whose stride actually covers
+// the ground. Moving faster than this made the feet skate.
+const WALK_SPEED = 1.35;
 const RUN_SPEED = 4.8;
 const ACCELERATION = 14;
 const GRAVITY = 16;

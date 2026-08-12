@@ -20,8 +20,8 @@ const STORAGE_WORLD = 'mint-playground.world';
 const STORAGE_CHARACTER = 'mint-playground.character';
 const STORAGE_GROUND_OFFSET_PREFIX = 'mint-playground.groundOffset.';
 const STORAGE_LIGHT_INTENSITY = 'mint-playground.lightIntensity';
-const STORAGE_ARM_TUCK = 'mint-playground.armTuck';
-const ARM_TUCK_STEP = 2;
+const STORAGE_ARM_TUCK = 'mint-playground.armNarrowing';
+const ARM_TUCK_STEP = 0.05;
 const GROUND_OFFSET_STEP = 0.02;
 const LIGHT_INTENSITY_STEP = 0.1;
 // Collider surfaces sit slightly below the visible splat surface. These are
@@ -77,6 +77,8 @@ export class Game {
   private reducedMotion = false;
   private groundOffsetSource: 'measured' | 'default' | 'manual' | 'stored' = 'stored';
   private armTuckTarget: number | null = null;
+  private captureMode = false;
+  private captureInputYaw: number | null = null;
   private pendingCalibration:
     | { worldKey: string; framesLeft: number; attemptsLeft: number; rounds: number[] }
     | null = null;
@@ -197,6 +199,7 @@ export class Game {
     try {
       const loaded = await this.worlds.load(entry);
       if (!loaded) return; // superseded by a newer switch
+      if (this.captureMode) loaded.root.visible = false;
       localStorage.setItem(STORAGE_WORLD, key);
       this.overlay.setSelected(key, null);
       this.splatGround.reset();
@@ -243,7 +246,7 @@ export class Game {
       this.character = next;
       this.character.setReducedMotion(this.reducedMotion);
       if (this.armTuckTarget === null) this.armTuckTarget = this.loadArmTuck();
-      if (this.armTuckTarget !== null) next.setArmTuckTarget(this.armTuckTarget);
+      if (this.armTuckTarget !== null) next.setArmNarrowing(this.armTuckTarget);
       next.root.position.copy(this.controller.position);
       next.root.rotation.y = this.controller.yaw;
       this.scene.add(next.root);
@@ -290,7 +293,7 @@ export class Game {
       this.moveInput,
       this.input.isRunHeld(),
       jumpRequested,
-      this.cameraRig.yaw,
+      this.captureInputYaw ?? this.cameraRig.yaw,
       this.worlds.colliderMeshes,
     );
 
@@ -308,7 +311,7 @@ export class Game {
       this.controller.heightAboveGround,
       this.environment.keyDirection,
     );
-    if (this.worlds.world) {
+    if (this.worlds.world && !this.captureMode) {
       this.environment.requestBake(this.controller.position, this.hiddenDuringBake());
     }
 
@@ -441,10 +444,10 @@ export class Game {
   private applyArmTuckSteps(): void {
     const steps = this.input.consumeArmTuckSteps();
     if (steps === 0 || !this.character) return;
-    const target = this.character.setArmTuckTarget(this.character.armTuck + steps * ARM_TUCK_STEP);
-    this.armTuckTarget = target;
-    localStorage.setItem(STORAGE_ARM_TUCK, target.toFixed(1));
-    this.overlay.setStatus(`Arm tuck: ${target.toFixed(0)}°`, 'ready');
+    const value = this.character.setArmNarrowing(this.character.armTuck + steps * ARM_TUCK_STEP);
+    this.armTuckTarget = value;
+    localStorage.setItem(STORAGE_ARM_TUCK, value.toFixed(2));
+    this.overlay.setStatus(`Arm narrowing: ${Math.round(value * 100)}%`, 'ready');
   }
 
   private applyLightSteps(): void {
@@ -490,6 +493,28 @@ export class Game {
         for (let i = 0; i < frames; i += 1) this.update(delta, this.elapsed);
       },
       describeRig: () => this.character?.describeRig() ?? null,
+      // Hides the splat world and suspends light baking. Headless GPUs render
+      // millions of splats in software, which starves the compositor and makes
+      // screenshots time out; a plain background also shows a gait far better.
+      setCaptureMode: (enabled: boolean) => {
+        this.captureMode = enabled;
+        const world = this.worlds.world;
+        if (world) world.root.visible = !enabled;
+        this.scene.background = new THREE.Color(enabled ? '#8d93a1' : '#0b0b12');
+      },
+      // Fixes the camera so a gait can be captured from a repeatable angle.
+      setCameraPose: (yaw: number, pitch: number, distance: number) => {
+        this.cameraRig.yaw = yaw;
+        this.cameraRig.pitch = pitch;
+        this.cameraRig.distance = distance;
+        this.cameraRig.snapTo(this.controller.position);
+      },
+      // Movement is normally camera-relative, so the camera only ever sees the
+      // character's back. Pinning the input direction lets the camera sit
+      // side-on while the character keeps walking the same way.
+      setInputYaw: (yaw: number | null) => {
+        this.captureInputYaw = yaw;
+      },
       probeGround: (x: number, z: number, fromY: number, reach: number) => ({
         collider: this.controller.sampleColliderHeight(x, z, this.worlds.colliderMeshes),
         splat: this.worlds.sampleSplatHeight(x, z, fromY, reach),
@@ -538,6 +563,7 @@ export class Game {
         calibrationSamples: this.calibrationSamples,
         calibrationNote: this.calibrationNote,
         armTuckTarget: this.character?.armTuck ?? 0,
+        clipSpeeds: this.character?.clipSpeeds ?? { walk: 0, run: 0, feet: 0 },
         armSpread: this.character?.armSpread ?? {
           leftBefore: 0,
           rightBefore: 0,

@@ -11,7 +11,7 @@
         "manifestVersion": 1,
         "kind": "animation",
         "assetType": "model_animation_batch",
-        "assetId": "w57fpmwxf7ybd9k80kn5pvbg3s8c9atn"
+        "assetId": "w573k2d6tsbkzkjypy13fz2t0d8ca3fy"
       },
       "transform": {
         "position": [
@@ -32,15 +32,15 @@
       },
       "mode": "local_files",
       "artifacts": {
-        "clip:w970nkv19413gspvpmg0yhb4bn8c8b2b:animation_glb": {
-          "artifactId": "clip:w970nkv19413gspvpmg0yhb4bn8c8b2b:animation_glb",
+        "clip:idle:animation_glb": {
+          "artifactId": "clip:idle:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "walking-2-inplace-bn8c8b2b.glb",
-          "localPath": "public/assets/mint/character-android/clip-w970nkv19413gspvpmg0yhb4bn8c8b2b-animation_glb.glb",
+          "filename": "idle-nn8ca4g2.glb",
+          "localPath": "public/assets/mint/character-android/clip-idle-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 3557164,
+          "byteSize": 3590284,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -54,15 +54,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w975vmt2drdbhpxv7n8kmhyty98c8ssj:animation_glb": {
-          "artifactId": "clip:w975vmt2drdbhpxv7n8kmhyty98c8ssj:animation_glb",
+        "clip:jump:animation_glb": {
+          "artifactId": "clip:jump:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "idle-y98c8ssj.glb",
-          "localPath": "public/assets/mint/character-android/clip-w975vmt2drdbhpxv7n8kmhyty98c8ssj-animation_glb.glb",
+          "filename": "regular-jump-998cbg4t.glb",
+          "localPath": "public/assets/mint/character-android/clip-jump-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 3590020,
+          "byteSize": 3566944,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -76,15 +76,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w977bg27geewf5fydxtz8yrccx8c8037:animation_glb": {
-          "artifactId": "clip:w977bg27geewf5fydxtz8yrccx8c8037:animation_glb",
+        "clip:run:animation_glb": {
+          "artifactId": "clip:run:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "lean-forward-sprint-inplace-cx8c8037.glb",
-          "localPath": "public/assets/mint/character-android/clip-w977bg27geewf5fydxtz8yrccx8c8037-animation_glb.glb",
+          "filename": "standard-forward-charge-inplace-mn8cbzqb.glb",
+          "localPath": "public/assets/mint/character-android/clip-run-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 3550556,
+          "byteSize": 3551164,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -98,15 +98,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w978kg1qyz9dcnwcc8thfp7w718c800c:animation_glb": {
-          "artifactId": "clip:w978kg1qyz9dcnwcc8thfp7w718c800c:animation_glb",
+        "clip:walk:animation_glb": {
+          "artifactId": "clip:walk:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "regular-jump-718c800c.glb",
-          "localPath": "public/assets/mint/character-android/clip-w978kg1qyz9dcnwcc8thfp7w718c800c-animation_glb.glb",
+          "filename": "proud-strut-inplace-ad8cb27r.glb",
+          "localPath": "public/assets/mint/character-android/clip-walk-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 3566688,
+          "byteSize": 3597124,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -125,10 +125,10 @@
           "role": "rigged_character",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "cyan-optic-sentinel-3s8c9atn-rigged.glb",
+          "filename": "cyan-optic-sentinel-0d8ca3fy-rigged.glb",
           "localPath": "public/assets/mint/character-android/rigged_character_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 3542988,
+          "byteSize": 3543236,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -149,7 +149,7 @@
         "manifestVersion": 1,
         "kind": "animation",
         "assetType": "model_animation_batch",
-        "assetId": "w57e8zjmqqtart6bqtj0xvkkqh8c85n4"
+        "assetId": "w578p5ac9fvx478sm9ssk6gj498cbxjz"
       },
       "transform": {
         "position": [
@@ -170,15 +170,15 @@
       },
       "mode": "local_files",
       "artifacts": {
-        "clip:w971jmy2vyp3hny671vat56k4n8c8eed:animation_glb": {
-          "artifactId": "clip:w971jmy2vyp3hny671vat56k4n8c8eed:animation_glb",
+        "clip:idle:animation_glb": {
+          "artifactId": "clip:idle:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "idle-4n8c8eed.glb",
-          "localPath": "public/assets/mint/character-knight/clip-w971jmy2vyp3hny671vat56k4n8c8eed-animation_glb.glb",
+          "filename": "idle-ad8cae9e.glb",
+          "localPath": "public/assets/mint/character-knight/clip-idle-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4758908,
+          "byteSize": 4758800,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -192,15 +192,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w9760cvpq8x9zjp6w3p5xyebah8c9ckd:animation_glb": {
-          "artifactId": "clip:w9760cvpq8x9zjp6w3p5xyebah8c9ckd:animation_glb",
+        "clip:jump:animation_glb": {
+          "artifactId": "clip:jump:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "walking-2-inplace-ah8c9ckd.glb",
-          "localPath": "public/assets/mint/character-knight/clip-w9760cvpq8x9zjp6w3p5xyebah8c9ckd-animation_glb.glb",
+          "filename": "regular-jump-358cbwns.glb",
+          "localPath": "public/assets/mint/character-knight/clip-jump-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4724548,
+          "byteSize": 4734228,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -214,15 +214,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w97bvta213kcb75rvmxn622vnx8c9c6r:animation_glb": {
-          "artifactId": "clip:w97bvta213kcb75rvmxn622vnx8c9c6r:animation_glb",
+        "clip:run:animation_glb": {
+          "artifactId": "clip:run:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "lean-forward-sprint-inplace-nx8c9c6r.glb",
-          "localPath": "public/assets/mint/character-knight/clip-w97bvta213kcb75rvmxn622vnx8c9c6r-animation_glb.glb",
+          "filename": "standard-forward-charge-inplace-s98cadvx.glb",
+          "localPath": "public/assets/mint/character-knight/clip-run-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4717512,
+          "byteSize": 4717780,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -236,15 +236,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w97dbycmvsn915mqwrp5qj6ngh8c8eaw:animation_glb": {
-          "artifactId": "clip:w97dbycmvsn915mqwrp5qj6ngh8c8eaw:animation_glb",
+        "clip:walk:animation_glb": {
+          "artifactId": "clip:walk:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "regular-jump-gh8c8eaw.glb",
-          "localPath": "public/assets/mint/character-knight/clip-w97dbycmvsn915mqwrp5qj6ngh8c8eaw-animation_glb.glb",
+          "filename": "proud-strut-inplace-zd8capwx.glb",
+          "localPath": "public/assets/mint/character-knight/clip-walk-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4732756,
+          "byteSize": 4762128,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -263,10 +263,10 @@
           "role": "rigged_character",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "silver-plate-sentinel-qh8c85n4-rigged.glb",
+          "filename": "silver-plate-sentinel-498cbxjz-rigged.glb",
           "localPath": "public/assets/mint/character-knight/rigged_character_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4709956,
+          "byteSize": 4709860,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -287,7 +287,7 @@
         "manifestVersion": 1,
         "kind": "animation",
         "assetType": "model_animation_batch",
-        "assetId": "w576kzxv0efw98sdhfjy1c1r3h8c9w4r"
+        "assetId": "w57bn1wcw987j32j3jtc8fxm6x8cbp3h"
       },
       "transform": {
         "position": [
@@ -308,15 +308,15 @@
       },
       "mode": "local_files",
       "artifacts": {
-        "clip:w973a7gtq7m3eafzybvm947qz18c8qd4:animation_glb": {
-          "artifactId": "clip:w973a7gtq7m3eafzybvm947qz18c8qd4:animation_glb",
+        "clip:idle:animation_glb": {
+          "artifactId": "clip:idle:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "lean-forward-sprint-inplace-z18c8qd4.glb",
-          "localPath": "public/assets/mint/character-superhero/clip-w973a7gtq7m3eafzybvm947qz18c8qd4-animation_glb.glb",
+          "filename": "idle-6h8cbjh0.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-idle-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4575816,
+          "byteSize": 4617448,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -330,15 +330,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w97cx8z9q2r73db277qmgy97018c97mj:animation_glb": {
-          "artifactId": "clip:w97cx8z9q2r73db277qmgy97018c97mj:animation_glb",
+        "clip:jump:animation_glb": {
+          "artifactId": "clip:jump:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "regular-jump-018c97mj.glb",
-          "localPath": "public/assets/mint/character-superhero/clip-w97cx8z9q2r73db277qmgy97018c97mj-animation_glb.glb",
+          "filename": "regular-jump-498cay8y.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-jump-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4591952,
+          "byteSize": 4592204,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -352,15 +352,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w97decr6847086fftvwkyvwnk58c8pqw:animation_glb": {
-          "artifactId": "clip:w97decr6847086fftvwkyvwnk58c8pqw:animation_glb",
+        "clip:run:animation_glb": {
+          "artifactId": "clip:run:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "walking-2-inplace-k58c8pqw.glb",
-          "localPath": "public/assets/mint/character-superhero/clip-w97decr6847086fftvwkyvwnk58c8pqw-animation_glb.glb",
+          "filename": "standard-forward-charge-inplace-a58cb934.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-run-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4582424,
+          "byteSize": 4576424,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -374,15 +374,15 @@
           "requiresKtx2": false,
           "unknownRequiredExtensions": []
         },
-        "clip:w97dnc6zemje7tjf1n3gq8tay18c97n7:animation_glb": {
-          "artifactId": "clip:w97dnc6zemje7tjf1n3gq8tay18c97n7:animation_glb",
+        "clip:walk:animation_glb": {
+          "artifactId": "clip:walk:animation_glb",
           "role": "animation_clip",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "idle-y18c97n7.glb",
-          "localPath": "public/assets/mint/character-superhero/clip-w97dnc6zemje7tjf1n3gq8tay18c97n7-animation_glb.glb",
+          "filename": "proud-strut-inplace-458ca10z.glb",
+          "localPath": "public/assets/mint/character-superhero/clip-walk-animation_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4617196,
+          "byteSize": 4620772,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"
@@ -401,10 +401,10 @@
           "role": "rigged_character",
           "format": "glb",
           "contentType": "model/gltf-binary",
-          "filename": "purple-hooded-sentinel-3h8c9w4r-rigged.glb",
+          "filename": "purple-hooded-sentinel-6x8cbp3h-rigged.glb",
           "localPath": "public/assets/mint/character-superhero/rigged_character_glb.glb",
           "loaderHint": "gltf",
-          "byteSize": 4568252,
+          "byteSize": 4568496,
           "extensionsUsed": [
             "KHR_materials_ior",
             "KHR_materials_specular"

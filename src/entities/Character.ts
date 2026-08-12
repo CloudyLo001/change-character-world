@@ -9,11 +9,16 @@ export type { ClipRole };
 
 const TARGET_HEIGHT = 1.75;
 const FADE_SECONDS = 0.18;
-// Ground speeds (m/s) the walk/run cycles read as natural at timeScale 1.
-// timeScale is scaled by actual controller speed so strides match the ground
-// and feet stop sliding.
-const WALK_REFERENCE_SPEED = 1.5;
-const RUN_REFERENCE_SPEED = 4.8;
+// Fallbacks only. The ground speed each cycle was authored for is measured from
+// the clip itself at load; guessing it is what made the feet skate.
+const WALK_FALLBACK_SPEED = 1.4;
+const RUN_FALLBACK_SPEED = 3.6;
+const STRIDE_SAMPLES = 48;
+const MIN_PLAUSIBLE_CLIP_SPEED = 0.35;
+const MAX_PLAUSIBLE_CLIP_SPEED = 9;
+/** How far playback may stray from the clip's authored cadence. */
+const MIN_TIME_SCALE = 0.55;
+const MAX_TIME_SCALE = 2.3;
 const IDLE_FULL_BELOW = 0.15;
 const WALK_FULL_AT = 0.9;
 const RUN_BLEND_START = 2.4;
@@ -35,9 +40,21 @@ const UPPER_ARM_PATTERN = /(upper.?arm|shoulder|arm)/i;
 const FOREARM_PATTERN = /(fore.?arm|lower.?arm|elbow)/i;
 const LEFT_PATTERN = /(left|(^|[^a-z])l($|[^a-z]))/i;
 const RIGHT_PATTERN = /(right|(^|[^a-z])r($|[^a-z]))/i;
-/** Degrees the upper arm may sit off the torso before it reads as flared. */
-const DEFAULT_ARM_TUCK_TARGET = 10;
+/**
+ * How much of the arm's sideways spread to remove. Scaling rather than clamping
+ * keeps the arm's lateral movement alive instead of freezing it at a limit.
+ */
+const DEFAULT_ARM_NARROWING = 0.55;
+/** Spread below this is left alone — a naturally narrow arm needs no help. */
+const ARM_SPREAD_FLOOR = 8;
 const MAX_ARM_TUCK = 55;
+/** Share of the upper-arm correction passed to the forearm so hands come in too. */
+const FOREARM_TUCK_SHARE = 0.55;
+// Smooth fades replacing hard cutoffs, so the correction can never step between
+// frames as the arm swings through.
+const FRONTAL_FADE_IN = 0.18;
+const FRONTAL_FADE_OUT = 0.42;
+const DOWNWARD_FADE = 0.25;
 const CHARACTER_ENV_MAP_INTENSITY = 1;
 
 /**
@@ -56,14 +73,19 @@ export class Character {
     walk: 0,
     run: 0,
   };
-  private jumpWeight = 0;
   private jumping = false;
+  private locomotionSynced = false;
   private reducedMotion = false;
   /** How far the posed feet had to be corrected off the bind-pose estimate. */
   readonly footCorrection: number;
 
   private readonly arms: ArmChain[] = [];
-  private armTuckTarget = DEFAULT_ARM_TUCK_TARGET;
+  private readonly feet: FootBone[] = [];
+  private readonly naturalSpeeds: Record<'walk' | 'run', number> = {
+    walk: WALK_FALLBACK_SPEED,
+    run: RUN_FALLBACK_SPEED,
+  };
+  private armNarrowing = DEFAULT_ARM_NARROWING;
   private lastArmSpread: ArmSpread = {
     leftBefore: 0,
     rightBefore: 0,
@@ -79,6 +101,7 @@ export class Character {
   private readonly parentInverse = new THREE.Quaternion();
   private readonly tuckAxis = new THREE.Vector3();
   private readonly tuckDelta = new THREE.Quaternion();
+  private readonly rebasedDelta = new THREE.Quaternion();
 
   private constructor(
     readonly entry: CharacterEntry,
@@ -119,7 +142,105 @@ export class Character {
 
     this.footCorrection = this.alignPosedFeet(model);
     this.collectArmChains(model);
+    this.collectFootBones(model);
+    this.measureNaturalSpeeds();
     prepareMaterials(model);
+  }
+
+  private collectFootBones(model: THREE.Group): void {
+    model.traverse((object) => {
+      if (!(object as THREE.Bone).isBone) return;
+      if (!TOE_BONE_PATTERN.test(object.name) && !ANKLE_BONE_PATTERN.test(object.name)) return;
+      const isLeft = LEFT_PATTERN.test(object.name);
+      const isRight = RIGHT_PATTERN.test(object.name);
+      if (!isLeft && !isRight) return;
+      // Prefer the toe: it stays planted longest, so its backward travel is the
+      // cleanest read of how far the body moves per step.
+      const side: ArmSide = isLeft ? 'left' : 'right';
+      const isToe = TOE_BONE_PATTERN.test(object.name);
+      const existing = this.feet.find((foot) => foot.side === side);
+      if (!existing) this.feet.push({ side, bone: object, isToe });
+      else if (isToe && !existing.isToe) {
+        existing.bone = object;
+        existing.isToe = true;
+      }
+    });
+  }
+
+  /**
+   * Works out the ground speed each locomotion clip was authored for, by
+   * running the clip in isolation and watching how fast the planted foot
+   * travels backwards underneath the body. Playback rate is then derived from
+   * this, so a stride covers exactly the distance the controller moves and the
+   * feet stop sliding.
+   */
+  private measureNaturalSpeeds(): void {
+    if (this.feet.length < 2) return;
+    for (const role of ['walk', 'run'] as const) {
+      const action = this.actions.get(role);
+      if (!action) continue;
+      const measured = this.measureClipSpeed(action);
+      if (measured !== null) this.naturalSpeeds[role] = measured;
+    }
+  }
+
+  private measureClipSpeed(action: THREE.AnimationAction): number | null {
+    const duration = action.getClip().duration;
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+
+    // Isolate the clip so nothing else contributes to the sampled pose.
+    const saved = [...this.actions.values()].map((other) => ({
+      action: other,
+      weight: other.getEffectiveWeight(),
+      timeScale: other.timeScale,
+      time: other.time,
+      enabled: other.enabled,
+    }));
+    for (const entry of saved) entry.action.setEffectiveWeight(0);
+    action.reset();
+    action.enabled = true;
+    action.timeScale = 1;
+    action.setEffectiveWeight(1);
+    action.play();
+
+    const step = duration / STRIDE_SAMPLES;
+    const current = new THREE.Vector3();
+    let previous: Array<{ y: number; z: number }> | null = null;
+    let total = 0;
+    let samples = 0;
+
+    for (let i = 0; i <= STRIDE_SAMPLES; i += 1) {
+      this.mixer.update(i === 0 ? 0 : step);
+      this.root.updateMatrixWorld(true);
+      const positions = this.feet.map((foot) => {
+        foot.bone.getWorldPosition(current);
+        this.root.worldToLocal(current);
+        return { y: current.y, z: current.z };
+      });
+      if (previous) {
+        // The lower foot is the one carrying weight; its backward travel is the
+        // distance the body covers.
+        const index = positions[0].y <= positions[1].y ? 0 : 1;
+        const travel = previous[index].z - positions[index].z;
+        if (travel > 0) {
+          total += travel / step;
+          samples += 1;
+        }
+      }
+      previous = positions;
+    }
+
+    for (const entry of saved) {
+      entry.action.enabled = entry.enabled;
+      entry.action.timeScale = entry.timeScale;
+      entry.action.time = entry.time;
+      entry.action.setEffectiveWeight(entry.weight);
+    }
+
+    if (samples === 0) return null;
+    const speed = total / samples;
+    if (speed < MIN_PLAUSIBLE_CLIP_SPEED || speed > MAX_PLAUSIBLE_CLIP_SPEED) return null;
+    return speed;
   }
 
   /**
@@ -237,14 +358,19 @@ export class Character {
     this.reducedMotion = enabled;
   }
 
-  /** Degrees of sideways spread allowed before the arms are pulled in. */
-  setArmTuckTarget(degrees: number): number {
-    this.armTuckTarget = THREE.MathUtils.clamp(degrees, 0, 90);
-    return this.armTuckTarget;
+  /** Fraction of the arms' sideways spread to remove; 0 disables the fix. */
+  setArmNarrowing(value: number): number {
+    this.armNarrowing = THREE.MathUtils.clamp(value, 0, 1);
+    return this.armNarrowing;
   }
 
   get armTuck(): number {
-    return this.armTuckTarget;
+    return this.armNarrowing;
+  }
+
+  /** Ground speed each locomotion clip was authored for, in m/s. */
+  get clipSpeeds(): { walk: number; run: number; feet: number } {
+    return { ...this.naturalSpeeds, feet: this.feet.length };
   }
 
   /** Bone names and the detected arm chain, for diagnosing an unknown rig. */
@@ -274,13 +400,21 @@ export class Character {
   }
 
   /**
-   * Pulls flared arms back toward the torso after the animation has posed the
-   * skeleton. Only the sideways component is touched — the correction rotates
-   * about the character's forward axis — so the forward/back arm swing that
-   * carries the walk and run cycles is preserved exactly as animated.
+   * Narrows flared arms toward the torso after the animation has posed the
+   * skeleton. Two properties matter here:
+   *
+   * - It *scales* the spread rather than clamping it to a limit. Clamping made
+   *   every frame past the limit land on the same angle, which flattened the
+   *   arm's lateral movement into a constant and read as pinned and lifeless.
+   *   Scaling keeps the shape of the motion and just narrows it.
+   * - It rotates about the character's forward axis only, so the forward/back
+   *   swing that carries the walk and run cycles is untouched.
+   *
+   * The forearm gets a share of the same rotation, otherwise the elbows come in
+   * while the hands stay splayed.
    */
   private applyArmTuck(): void {
-    if (this.arms.length === 0) return;
+    if (this.arms.length === 0 || this.armNarrowing <= 0.001) return;
     this.root.updateMatrixWorld(true);
     this.root.getWorldQuaternion(this.rootQuaternion);
     this.rootInverse.copy(this.rootQuaternion).invert();
@@ -293,33 +427,47 @@ export class Character {
       this.lastArmSpread[arm.side === 'left' ? 'leftBefore' : 'rightBefore'] = before.lateral;
       this.lastArmSpread[arm.side === 'left' ? 'leftAfter' : 'rightAfter'] = before.lateral;
 
-      const excess = before.frontal - this.armTuckTarget;
-      if (excess <= 0.01 || before.downward <= 0) continue;
-      // An arm swung far forward has almost no frontal projection, which makes
-      // the angle jittery; there is no visible flare to correct there anyway.
-      if (Math.hypot(before.sideways, before.downward) < 0.25) continue;
-      const correction = THREE.MathUtils.degToRad(Math.min(excess, MAX_ARM_TUCK));
+      // Everything below is a smooth function of the pose. Hard cutoffs here
+      // used to drop a large correction between one frame and the next, which
+      // showed up as a pop as the arm swung through.
+      const reach = Math.hypot(before.sideways, before.downward);
+      const confidence =
+        smoothstep(FRONTAL_FADE_IN, FRONTAL_FADE_OUT, reach) *
+        smoothstep(0, DOWNWARD_FADE, before.downward);
+      if (confidence <= 0.001) continue;
+
+      const excess = Math.max(0, before.frontal - ARM_SPREAD_FLOOR);
+      const correction =
+        THREE.MathUtils.degToRad(Math.min(excess, MAX_ARM_TUCK)) *
+        this.armNarrowing *
+        confidence;
+      if (correction <= 1e-4) continue;
 
       // Rotating about +forward carries +X down toward the body, so the sign
       // flips for the arm on the other side.
-      this.tuckDelta.setFromAxisAngle(
-        this.tuckAxis,
-        before.sideways > 0 ? -correction : correction,
-      );
-
-      const parent = arm.bone.parent;
-      if (!parent) continue;
-      parent.getWorldQuaternion(this.parentWorld);
-      this.parentInverse.copy(this.parentWorld).invert();
-      // World-space delta rebased into the bone's parent space.
-      arm.bone.quaternion.premultiply(
-        this.parentInverse.clone().multiply(this.tuckDelta).multiply(this.parentWorld),
-      );
-      arm.bone.updateMatrixWorld(true);
+      const signed = before.sideways > 0 ? -correction : correction;
+      this.rotateBoneAboutWorldAxis(arm.bone, signed);
+      this.rotateBoneAboutWorldAxis(arm.elbow, signed * FOREARM_TUCK_SHARE);
 
       this.lastArmSpread[arm.side === 'left' ? 'leftAfter' : 'rightAfter'] =
         this.measureArm(arm).lateral;
     }
+  }
+
+  /** Applies a world-space rotation about `tuckAxis` to one bone's local pose. */
+  private rotateBoneAboutWorldAxis(bone: THREE.Object3D, angle: number): void {
+    const parent = bone.parent;
+    if (!parent || Math.abs(angle) < 1e-5) return;
+    this.tuckDelta.setFromAxisAngle(this.tuckAxis, angle);
+    parent.getWorldQuaternion(this.parentWorld);
+    this.parentInverse.copy(this.parentWorld).invert();
+    // World-space delta rebased into the bone's parent space.
+    this.rebasedDelta
+      .copy(this.parentInverse)
+      .multiply(this.tuckDelta)
+      .multiply(this.parentWorld);
+    bone.quaternion.premultiply(this.rebasedDelta);
+    bone.updateMatrixWorld(true);
   }
 
   /** Arm direction in the character's own frame, plus the angles derived from it. */
@@ -393,18 +541,45 @@ export class Character {
     this.weights.idle += (idleTarget - this.weights.idle) * lerp;
     this.weights.walk += (walkTarget - this.weights.walk) * lerp;
     this.weights.run += (runTarget - this.weights.run) * lerp;
-    this.jumpWeight += ((airborne ? 1 : 0) - this.jumpWeight) * lerp;
 
     idle?.setEffectiveWeight(this.weights.idle);
     walk?.setEffectiveWeight(this.weights.walk);
     run?.setEffectiveWeight(this.weights.run);
 
-    // Stride sync: cycle rate follows actual ground speed.
+    // Stride sync: play each cycle at the rate that makes its stride cover the
+    // ground actually being travelled, using the speed measured from the clip.
     if (walk) {
-      walk.timeScale = THREE.MathUtils.clamp(speed / WALK_REFERENCE_SPEED, 0.6, 1.7);
+      walk.timeScale = THREE.MathUtils.clamp(
+        speed / this.naturalSpeeds.walk,
+        MIN_TIME_SCALE,
+        MAX_TIME_SCALE,
+      );
     }
     if (run) {
-      run.timeScale = THREE.MathUtils.clamp(speed / RUN_REFERENCE_SPEED, 0.6, 1.4);
+      run.timeScale = THREE.MathUtils.clamp(
+        speed / this.naturalSpeeds.run,
+        MIN_TIME_SCALE,
+        MAX_TIME_SCALE,
+      );
+    }
+
+    // Walk and run free-run on independent clocks, so when they blend their
+    // relative phase is arbitrary and the leg swings can partially cancel.
+    // Align the incoming cycle to the outgoing one as the blend opens.
+    if (walk && run && this.weights.walk > 0.01 && this.weights.run > 0.01) {
+      if (!this.locomotionSynced) {
+        const leader = this.weights.walk >= this.weights.run ? walk : run;
+        const follower = leader === walk ? run : walk;
+        const leaderDuration = leader.getClip().duration;
+        const followerDuration = follower.getClip().duration;
+        if (leaderDuration > 0) {
+          const phase = (leader.time % leaderDuration) / leaderDuration;
+          follower.time = phase * followerDuration;
+        }
+        this.locomotionSynced = true;
+      }
+    } else {
+      this.locomotionSynced = false;
     }
 
     this.mixer.update(this.reducedMotion ? 0 : delta);
@@ -434,6 +609,12 @@ interface ArmChain {
   elbow: THREE.Object3D;
 }
 
+interface FootBone {
+  side: ArmSide;
+  bone: THREE.Object3D;
+  isToe: boolean;
+}
+
 /** Nearest descendant that reads as a forearm, or failing that, any child. */
 function findElbow(bone: THREE.Bone): THREE.Object3D | null {
   let named: THREE.Object3D | null = null;
@@ -442,6 +623,12 @@ function findElbow(bone: THREE.Bone): THREE.Object3D | null {
     if (FOREARM_PATTERN.test(child.name)) named = child;
   });
   return named ?? bone.children.find((child) => (child as THREE.Bone).isBone) ?? null;
+}
+
+/** Smooth 0..1 ramp, so corrections fade in rather than switching on. */
+function smoothstep(edge0: number, edge1: number, value: number): number {
+  const t = THREE.MathUtils.clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
 }
 
 function isDescendantOf(node: THREE.Object3D, ancestor: THREE.Object3D): boolean {
