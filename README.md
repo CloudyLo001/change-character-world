@@ -59,9 +59,8 @@ are not part of the repo.
   the ground is read from the splats themselves (see below); if you happen to
   have a collider `.glb`, select it alongside the splat file and it will be
   used instead for exact collision.
-- **Character (guided)** — the recommended path, and the one to use for a
-  character you rigged and animated in Mint. Accepts `.glb`, `.gltf`, `.fbx`,
-  `.obj` and `.stl`, and walks you through three steps:
+- **Character** — accepts `.glb`, `.gltf`, `.fbx`, `.obj` and `.stl`, and walks
+  you through three steps:
 
   1. Pick the model. It reports the format, triangle count and bone count. A
      mesh with no skeleton (any `.obj`/`.stl`, and plenty of `.glb`s) is told so
@@ -84,9 +83,6 @@ are not part of the repo.
   carrying root motion have the forward drift removed, since the controller owns
   position — the travel is kept as the clip's authored ground speed, which is a
   better reading than the foot-travel estimate.
-
-- **Quick add a character** — the old path: one clip file per role, matched by
-  filename, no review. Faster when you already know your filenames are right.
 
 Any locomotion role you do not supply is borrowed from the shared clip set in
 `public/assets/clips/`, so a character uploaded with no animation at all still

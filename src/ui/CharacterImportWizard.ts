@@ -46,13 +46,13 @@ interface ClipRow {
 /**
  * Guided import for a character plus however many animation files it came with.
  *
- * The quick drop in the settings panel guesses a role per file from its name
- * and stores whatever it guessed. That falls apart on the workflow this exists
- * for: a rigged model plus a batch of clips generated in Mint, where one file
- * routinely holds several takes and the names are as likely to be `anim_01` as
- * `walking`. So this parses every clip in every file, measures what each one
- * actually does on *this* skeleton, proposes an assignment, and then shows the
- * user the evidence before anything is written.
+ * Guessing a role per file from its filename — which is all this used to do —
+ * falls apart on the workflow it exists for: a rigged model plus a batch of
+ * clips generated in Mint, where one file routinely holds several takes and the
+ * names are as likely to be `anim_01` as `walking`. So this parses every clip in
+ * every file, measures what each one actually does on *this* skeleton, proposes
+ * an assignment, and then shows the user the evidence before anything is
+ * written.
  */
 export class CharacterImportWizard {
   private readonly root: HTMLElement;

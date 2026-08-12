@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// End-to-end check of the "uploaded character has no animation" path: uploads a
-// rigged character GLB on its own, with no clip files, and verifies it ends up
-// walking on borrowed animation.
+// End-to-end check of the "uploaded character has no animation" path: takes a
+// rigged character GLB through the import wizard with no clip files at all, and
+// verifies it ends up walking on borrowed animation.
 //
 //   node scripts/test-upload-borrow.mjs
 //
@@ -38,7 +38,18 @@ async function main() {
   );
 
   await page.click('#settings-open');
-  await page.setInputFiles('#upload-character', [MODEL]);
+  await page.click('#character-import-open');
+  await page.setInputFiles('#import-model', MODEL);
+  await page.waitForSelector('#import-next', { timeout: 60_000 });
+  // Step 1 -> step 2. No clip files are added: borrowing is the whole point.
+  await page.click('#import-next');
+  await page.click('#import-next');
+  // The model carries its own embedded clip, so a review step appears; a model
+  // with none would have saved straight from step 2.
+  const save = await page
+    .waitForSelector('#import-save', { timeout: 120_000 })
+    .catch(() => null);
+  if (save) await save.click();
 
   await page.waitForFunction(
     (known) =>

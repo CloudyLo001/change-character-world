@@ -6,10 +6,8 @@ import {
   SPLAT_EXTENSIONS,
   type PendingImport,
   type StoredAsset,
-  type StoredClipUpload,
 } from '../mint/library';
-import { isModelFile } from '../assets/model-loading';
-import { assignClipRolesByName, type ClipRole } from '../mint/registry';
+import type { ClipRole } from '../mint/registry';
 
 type Status = 'idle' | 'busy' | 'error' | 'done';
 
@@ -29,7 +27,6 @@ export class SettingsPanel {
   private readonly statusEl: HTMLElement;
   private readonly usageEl: HTMLElement;
   private readonly worldInput: HTMLInputElement;
-  private readonly characterInput: HTMLInputElement;
   private readonly linkInput: HTMLInputElement;
   private readonly linkKind: HTMLSelectElement;
 
@@ -45,14 +42,12 @@ export class SettingsPanel {
     this.statusEl = requireElement('#settings-status');
     this.usageEl = requireElement('#settings-usage');
     this.worldInput = requireElement<HTMLInputElement>('#upload-world');
-    this.characterInput = requireElement<HTMLInputElement>('#upload-character');
     this.linkInput = requireElement<HTMLInputElement>('#import-link');
     this.linkKind = requireElement<HTMLSelectElement>('#import-kind');
 
     this.openButton.addEventListener('click', this.onOpen);
     this.closeButton.addEventListener('click', this.onClose);
     this.worldInput.addEventListener('change', this.onWorldFiles);
-    this.characterInput.addEventListener('change', this.onCharacterFiles);
     requireElement('#import-queue').addEventListener('click', this.onQueueImport);
   }
 
@@ -72,17 +67,18 @@ export class SettingsPanel {
     void this.addWorld(files);
   };
 
-  private readonly onCharacterFiles = () => {
-    const files = [...(this.characterInput.files ?? [])];
-    this.characterInput.value = '';
-    if (files.length === 0) return;
-    void this.addCharacter(files);
-  };
-
   private readonly onQueueImport = () => {
-    const reference = this.linkInput.value.trim();
-    if (!reference) {
+    const raw = this.linkInput.value.trim();
+    if (!raw) {
       this.setStatus('Paste a mint.gg link or asset ID first.', 'error');
+      return;
+    }
+    const reference = extractAssetReference(raw);
+    if (!reference) {
+      this.setStatus(
+        "That doesn't contain a mint.gg link or asset ID. Paste just the link to the asset.",
+        'error',
+      );
       return;
     }
     const kind = this.linkKind.value === 'world' ? 'world' : 'character';
@@ -123,55 +119,6 @@ export class SettingsPanel {
         collider
           ? `Added "${asset.label}" with its collider.`
           : `Added "${asset.label}". It has no collider, so the ground is read from the splats.`,
-        'done',
-      );
-    } catch (error) {
-      this.setStatus(errorMessage(error), 'error');
-    }
-  }
-
-  private async addCharacter(files: File[]): Promise<void> {
-    const glbs = files.filter((file) => isModelFile(file.name));
-    if (glbs.length === 0) {
-      this.setStatus(
-        'Pick the rigged character model, and its clip files if you have them. ' +
-          'GLB, GLTF, FBX, OBJ and STL are accepted.',
-        'error',
-      );
-      return;
-    }
-
-    // Pick the character mesh first and hold it out of role matching. Matching
-    // everything at once let a model named like "hero-walking-rigged.glb" claim
-    // the walk role, which was then dropped for being the model — silently
-    // losing the real walk clip.
-    const explicitModel = glbs.find((file) => /rigged|character|model/i.test(file.name));
-    const provisionalRoles = assignClipRolesByName(glbs, (file) => file.name);
-    const model =
-      explicitModel ??
-      glbs.filter((file) => !provisionalRoles.has(file)).sort((a, b) => b.size - a.size)[0] ??
-      [...glbs].sort((a, b) => b.size - a.size)[0];
-
-    const clipCandidates = glbs.filter((file) => file !== model);
-    const roles = assignClipRolesByName(clipCandidates, (file) => file.name);
-    const clips: StoredClipUpload[] = [...roles].map(([file, role]) => ({
-      role: role as ClipRole,
-      file,
-    }));
-
-    this.setStatus(`Storing ${model.name}…`, 'busy');
-    try {
-      const asset = await this.library.addCharacter(prettyLabel(model.name), model, clips);
-      await this.onLibraryChanged();
-      await this.refresh();
-      const missing = (['walk', 'run', 'jump'] as ClipRole[]).filter(
-        (role) => !clips.some((clip) => clip.role === role),
-      );
-      this.setStatus(
-        missing.length === 0
-          ? `Added "${asset.label}" with walk, run and jump.`
-          : `Added "${asset.label}" — borrowing ${missing.join(', ')} from the built-in set. ` +
-              'Rig it in Mint below for animation made for this character.',
         'done',
       );
     } catch (error) {
@@ -326,7 +273,6 @@ export class SettingsPanel {
     this.openButton.removeEventListener('click', this.onOpen);
     this.closeButton.removeEventListener('click', this.onClose);
     this.worldInput.removeEventListener('change', this.onWorldFiles);
-    this.characterInput.removeEventListener('change', this.onCharacterFiles);
   }
 }
 
@@ -345,6 +291,25 @@ function selectText(element: HTMLElement): void {
   const selection = window.getSelection();
   selection?.removeAllRanges();
   selection?.addRange(range);
+}
+
+/**
+ * Pulls the asset link or ID out of whatever was pasted, ignoring any prose
+ * around it. Without this, pasting a previously generated request back into the
+ * box wraps it in the template a second time and produces a request that
+ * contradicts itself — "Rig this Mint character: Import this Mint world…".
+ */
+export function extractAssetReference(input: string): string | null {
+  const text = input.trim();
+  const url = /https?:\/\/[^\s<>"']*mint\.gg\/[^\s<>"']+/i.exec(text);
+  // Trailing punctuation from a sentence the link was embedded in.
+  if (url) return url[0].replace(/[.,;:)\]]+$/, '');
+  // Mint asset IDs are 32 lowercase alphanumerics; only trust a bare one when
+  // there is no link to prefer.
+  const id = /(^|\s)([a-z0-9]{32})($|\s)/.exec(text);
+  if (id) return id[2];
+  // A short token with no whitespace is most likely an ID in some other shape.
+  return text.length <= 128 && !/\s/.test(text) ? text : null;
 }
 
 function importRequestText(record: PendingImport): string {

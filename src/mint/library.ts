@@ -286,33 +286,8 @@ export class AssetLibrary {
   }
 
   /**
-   * The quick path: one file per role, roles already guessed from filenames.
-   * Nothing here is analysed, so every measurement is stored as null and gets
-   * worked out at load time.
-   */
-  async addCharacter(label: string, model: File, clips: StoredClipUpload[]): Promise<StoredAsset> {
-    return this.addCharacterFromImport({
-      label,
-      model,
-      modelFormat: (fileExtension(model.name) || 'glb') as ModelFormat,
-      hasSkeleton: null,
-      clips: clips.map((clip) => ({
-        sourceFile: clip.file,
-        clipIndex: 0,
-        clipName: stripExtension(clip.file.name),
-        role: clip.role,
-        duration: null,
-        measuredSpeed: null,
-        bindRate: null,
-        unitScale: null,
-        rootMotion: null,
-      })),
-    });
-  }
-
-  /**
-   * The guided path: any number of clips, any number of them sharing a file,
-   * each already measured against this character's skeleton.
+   * Stores a reviewed character: any number of clips, any number of them
+   * sharing a file, each already measured against this character's skeleton.
    *
    * Files are stored once no matter how many clips point at them — a six-take
    * FBX is one blob, and counting it once is also what keeps the usage figure
@@ -470,11 +445,6 @@ export class AssetLibrary {
     tx.objectStore(ASSET_STORE).put(asset);
     await done(tx);
   }
-}
-
-export interface StoredClipUpload {
-  role: ClipRole;
-  file: File;
 }
 
 /** One reviewed clip on its way into the library. */
