@@ -93,6 +93,15 @@ interface ThreeGameTestHooks {
   stepPreview(frames?: number, delta?: number): void;
   /** Pin the follow camera to a fixed angle for repeatable capture. */
   setCameraPose(yaw: number, pitch: number, distance: number): void;
+  /** Turn the constant camera orbit on or off, optionally setting its direction. */
+  setAutoOrbit(enabled: boolean, direction?: number): void;
+  /** Camera yaw, the frozen movement basis, and the orbit's signed rate. */
+  cameraState(): {
+    yaw: number;
+    movementYaw: number;
+    autoOrbit: boolean;
+    autoOrbitSpeed: number;
+  };
   /** Hide the splat world and suspend light baking so headless capture is fast. */
   setCaptureMode(enabled: boolean): void;
   /** Pin the movement direction so the camera can view the character side-on. */

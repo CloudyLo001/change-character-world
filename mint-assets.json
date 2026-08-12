@@ -418,6 +418,68 @@
       },
       "thumbnailUrl": "public/assets/mint/world-cinema/preview_image.webp"
     },
+    "world-exhibition-hall": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "world",
+        "assetId": "j978xpvpbndz5e4zgyqyfyr8ed8bepq7"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "mode": "remote_stream",
+      "runtime": {
+        "artifactId": "world_runtime_rad",
+        "role": "environment",
+        "format": "rad",
+        "runtimeUrl": "https://cdn.mint.gg/rad/modern-convention-hall-e387be67fe85ec0c-lod.rad",
+        "renderer": "@sparkjsdev/spark",
+        "loaderHint": {
+          "renderer": "SparkRenderer",
+          "mesh": "SplatMesh",
+          "paged": true,
+          "lod": false
+        },
+        "collider": {
+          "artifactId": "world_collider",
+          "role": "physics_collider",
+          "format": "glb",
+          "runtimeUrl": "https://cdn.mint.gg/worlds/modern-convention-hall-collider-d84a5335fb5a2871.glb",
+          "loaderHint": "gltf",
+          "visible": false,
+          "requiredForPhysics": true
+        },
+        "byteSize": 44395136
+      },
+      "artifacts": {
+        "preview_image": {
+          "artifactId": "preview_image",
+          "role": "preview_image",
+          "format": "webp",
+          "contentType": "image/webp",
+          "filename": "modern-exhibition-hall-ed8bepq7-preview.webp",
+          "localPath": "public/assets/mint/world-exhibition-hall/preview_image.webp",
+          "loaderHint": "image",
+          "byteSize": 39430
+        }
+      },
+      "thumbnailUrl": "public/assets/mint/world-exhibition-hall/preview_image.webp"
+    },
     "world-grassland": {
       "source": {
         "manifestVersion": 1,

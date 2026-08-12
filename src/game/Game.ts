@@ -292,6 +292,7 @@ export class Game {
     this.applyGroundOffsetSteps();
     this.applyLightSteps();
     this.applyArmTuckSteps();
+    this.applyAutoOrbitInput();
     if (this.input.consumeRebakeRequest()) {
       this.environment.requestBake(this.controller.position, this.hiddenDuringBake(), true);
       this.overlay.setStatus('Re-baking world light…', 'loading');
@@ -314,7 +315,7 @@ export class Game {
       this.moveInput,
       this.input.isRunHeld(),
       jumpRequested,
-      this.captureInputYaw ?? this.cameraRig.yaw,
+      this.captureInputYaw ?? this.cameraRig.movementYaw,
       this.worlds.colliderMeshes,
     );
 
@@ -462,6 +463,31 @@ export class Game {
     return Number.isFinite(value) ? value : null;
   }
 
+  /**
+   * O toggles the orbit, Q/E steer it. Reported through the status line because
+   * a camera that starts moving on its own should say why.
+   */
+  private applyAutoOrbitInput(): void {
+    const toggles = this.input.consumeAutoOrbitToggles();
+    const steps = this.input.consumeAutoOrbitSteps();
+    if (toggles === 0 && steps === 0) return;
+
+    // Odd numbers of presses flip; even ones cancel out.
+    if (toggles % 2 === 1) this.cameraRig.toggleAutoOrbit();
+    if (steps !== 0) this.cameraRig.steerAutoOrbit(steps < 0 ? -1 : 1);
+
+    const speed = this.cameraRig.autoOrbitSpeed;
+    if (speed === 0) {
+      this.overlay.setStatus('Camera orbit off', 'ready');
+      return;
+    }
+    const seconds = (2 * Math.PI) / Math.abs(speed);
+    this.overlay.setStatus(
+      `Camera orbit ${speed < 0 ? 'left' : 'right'} · ${seconds.toFixed(0)}s per lap`,
+      'ready',
+    );
+  }
+
   private applyArmTuckSteps(): void {
     const steps = this.input.consumeArmTuckSteps();
     if (steps === 0 || !this.character) return;
@@ -529,6 +555,18 @@ export class Game {
         this.scene.background = new THREE.Color(enabled ? '#8d93a1' : '#0b0b12');
       },
       // Fixes the camera so a gait can be captured from a repeatable angle.
+      setAutoOrbit: (enabled: boolean, direction?: number) => {
+        if (direction !== undefined && direction !== 0) {
+          this.cameraRig.steerAutoOrbit(direction < 0 ? -1 : 1);
+        }
+        this.cameraRig.setAutoOrbit(enabled);
+      },
+      cameraState: () => ({
+        yaw: this.cameraRig.yaw,
+        movementYaw: this.cameraRig.movementYaw,
+        autoOrbit: this.cameraRig.autoOrbitEnabled,
+        autoOrbitSpeed: this.cameraRig.autoOrbitSpeed,
+      }),
       setCameraPose: (yaw: number, pitch: number, distance: number) => {
         this.cameraRig.yaw = yaw;
         this.cameraRig.pitch = pitch;

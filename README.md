@@ -21,13 +21,27 @@ Open http://127.0.0.1:5188.
 | `W A S D` / arrows | Move (camera-relative) |
 | `Shift` | Run |
 | `Space` | Jump |
-| Drag on the canvas | Orbit the camera |
+| Drag on the canvas | Orbit the camera (cancels auto-orbit) |
 | Mouse wheel | Zoom |
+| `O` | Toggle the constant camera orbit |
+| `Q` / `E` | Orbit left/right; press the same key again to speed it up |
 | `[` / `]` | Lower/raise the character's ground height (per world, saved) |
 | `,` / `.` | Dim/brighten the character's lighting (saved) |
 | `;` / `'` | Loosen/tighten how close the arms sit to the body (saved) |
 | `L` | Re-bake the world light probe at the current spot |
 | `H` | Hide/show all UI (for clean recording) |
+
+**The constant camera orbit.** `O` starts the camera circling the character and
+keeps it circling while you walk, run and jump. `Q` and `E` set the direction;
+pressing the active direction again winds the speed up a step, from a 25-second
+lap down to about 4 seconds, so one key doubles as the speed control. Any drag
+on the canvas takes the camera back and switches the orbit off.
+
+Movement stays keyed to the angle the camera held when the orbit started.
+`W A S D` is normally camera-relative, so a rotating camera would rotate the
+meaning of "forward" with it and a held `W` would walk the character in a
+circle; freezing the basis means the character walks a straight line while the
+camera sweeps around it, which is the shot this exists for.
 
 The bottom-center overlay has two dropdowns — **World** and **Character** —
 listing everything registered in `mint-assets.json` plus anything you have

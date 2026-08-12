@@ -28,6 +28,8 @@ export class InputController {
   private groundOffsetSteps = 0;
   private lightSteps = 0;
   private armTuckSteps = 0;
+  private autoOrbitToggles = 0;
+  private autoOrbitSteps = 0;
   private rebakeRequested = false;
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
@@ -41,6 +43,10 @@ export class InputController {
     if (event.code === 'Period') this.lightSteps += 1;
     if (event.code === 'Semicolon') this.armTuckSteps -= 1;
     if (event.code === 'Quote') this.armTuckSteps += 1;
+    if (event.code === 'KeyO' && !event.repeat) this.autoOrbitToggles += 1;
+    // Held Q/E would spin the speed up every frame; one step per press.
+    if (event.code === 'KeyQ' && !event.repeat) this.autoOrbitSteps -= 1;
+    if (event.code === 'KeyE' && !event.repeat) this.autoOrbitSteps += 1;
     if (event.code === 'Space') event.preventDefault();
     this.keys.add(event.code);
   };
@@ -133,6 +139,20 @@ export class InputController {
   consumeArmTuckSteps(): number {
     const steps = this.armTuckSteps;
     this.armTuckSteps = 0;
+    return steps;
+  }
+
+  /** Number of O presses since the last call. */
+  consumeAutoOrbitToggles(): number {
+    const toggles = this.autoOrbitToggles;
+    this.autoOrbitToggles = 0;
+    return toggles;
+  }
+
+  /** Net Q / E auto-orbit key presses since the last call. */
+  consumeAutoOrbitSteps(): number {
+    const steps = this.autoOrbitSteps;
+    this.autoOrbitSteps = 0;
     return steps;
   }
 
